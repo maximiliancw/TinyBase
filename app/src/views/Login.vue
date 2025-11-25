@@ -32,7 +32,7 @@ async function handleLogin() {
 </script>
 
 <template>
-  <div class="login-container">
+  <div class="login-container" style="width: 100vw; height: 100vh;">
     <div class="login-card fade-in">
       <h1>🔐 TinyBase</h1>
       <p class="text-muted" style="text-align: center; margin-bottom: 2rem;">
@@ -73,7 +73,7 @@ async function handleLogin() {
         <button
           type="submit"
           class="btn btn-primary"
-          style="width: 100%;"
+          style="width: initial; margin: 0 auto;"
           :disabled="authStore.loading"
         >
           <span v-if="authStore.loading" class="spinner"></span>
