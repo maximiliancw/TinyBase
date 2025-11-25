@@ -60,6 +60,10 @@ app/dist/
 app/.yarn/
 app/.pnp.*
 !app/.yarnrc.yml
+!app/.env.development
+!app/.env.production
+app/.env.local
+app/.env.*.local
 
 # TinyBase runtime
 functions/
