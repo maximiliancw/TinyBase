@@ -480,7 +480,6 @@ print(config.db_url)
 | `db_url` | `str` | `"sqlite:///./tinybase.db"` |
 | `auth_token_ttl_hours` | `int` | `24` |
 | `functions_path` | `str` | `"./functions"` |
-| `functions_file` | `str` | `"./functions.py"` |
 | `scheduler_enabled` | `bool` | `True` |
 | `scheduler_interval_seconds` | `int` | `5` |
 | `cors_allow_origins` | `list[str]` | `["*"]` |

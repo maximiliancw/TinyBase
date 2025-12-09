@@ -95,11 +95,7 @@ class Settings(BaseSettings):
     # Functions settings
     functions_path: str = Field(
         default="./functions",
-        description="Directory path for function modules"
-    )
-    functions_file: str = Field(
-        default="./functions.py",
-        description="Single file path for functions"
+        description="Directory path for function modules (must be a Python package)"
     )
     
     # Scheduler settings

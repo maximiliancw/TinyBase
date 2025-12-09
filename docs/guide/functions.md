@@ -14,9 +14,11 @@ A TinyBase function is:
 
 ## Defining Functions
 
+Functions are defined in individual files within the `functions/` package directory. Each function should live in its own file, allowing you to use uv's single-file script feature for inline dependencies.
+
 ### Basic Structure
 
-```python title="functions.py"
+```python title="functions/my_function.py"
 from pydantic import BaseModel
 from tinybase.functions import Context, register
 
@@ -326,12 +328,11 @@ Use the CLI to create new functions:
 tinybase functions new calculate_tax -d "Calculate tax for an order"
 ```
 
-This appends to your `functions.py`:
+This creates a new file `functions/calculate_tax.py`:
 
-```python
-# =============================================================================
-# Function: calculate_tax
-# =============================================================================
+```python title="functions/calculate_tax.py"
+from pydantic import BaseModel
+from tinybase.functions import Context, register
 
 
 class CalculateTaxInput(BaseModel):
@@ -365,25 +366,14 @@ def calculate_tax(ctx: Context, payload: CalculateTaxInput) -> CalculateTaxOutpu
 
 ## Organizing Functions
 
-### Single File
-
-For small projects, keep everything in `functions.py`:
+All user-defined functions must live in the `functions/` package directory. Each function should be in its own file:
 
 ```
 my-app/
-├── functions.py    # All functions here
-└── tinybase.toml
-```
-
-### Multiple Files
-
-For larger projects, use the `functions/` directory:
-
-```
-my-app/
-├── functions.py           # Main functions
 ├── functions/
-│   ├── __init__.py
+│   ├── __init__.py        # Package marker (auto-generated)
+│   ├── add_numbers.py     # One function per file
+│   ├── hello.py
 │   ├── orders.py          # Order-related functions
 │   ├── users.py           # User-related functions
 │   └── reports.py         # Reporting functions
@@ -405,6 +395,56 @@ class CreateOrderInput(BaseModel):
 def create_order(ctx: Context, payload: CreateOrderInput) -> ...:
     ...
 ```
+
+### Using uv's Single-File Script Feature
+
+Each function file can use uv's single-file script feature to define inline dependencies. This allows you to use third-party libraries without manually managing dependencies:
+
+```python title="functions/send_email.py"
+# /// script
+# dependencies = [
+#   "requests>=2.31.0",
+#   "python-dotenv>=1.0.0",
+# ]
+# ///
+
+from pydantic import BaseModel
+from tinybase.functions import Context, register
+import requests
+
+
+class SendEmailInput(BaseModel):
+    to: str
+    subject: str
+    body: str
+
+
+class SendEmailOutput(BaseModel):
+    success: bool
+    message_id: str | None = None
+
+
+@register(
+    name="send_email",
+    description="Send an email using an external service",
+    auth="auth",
+    input_model=SendEmailInput,
+    output_model=SendEmailOutput,
+    tags=["communication"],
+)
+def send_email(ctx: Context, payload: SendEmailInput) -> SendEmailOutput:
+    """Send email using requests library."""
+    response = requests.post(
+        "https://api.example.com/send",
+        json={"to": payload.to, "subject": payload.subject, "body": payload.body}
+    )
+    return SendEmailOutput(
+        success=response.status_code == 200,
+        message_id=response.json().get("id") if response.ok else None,
+    )
+```
+
+When TinyBase loads this function, it will automatically detect and install the dependencies using `uv pip install`. This makes it easy to use third-party libraries without managing a global dependency list.
 
 ## Best Practices
 

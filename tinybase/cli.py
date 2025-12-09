@@ -84,7 +84,6 @@ token_ttl_hours = 24
 
 [functions]
 path = "./functions"
-file = "./functions.py"
 
 [scheduler]
 enabled = true
@@ -279,19 +278,205 @@ def init(
     else:
         typer.echo("  tinybase.toml already exists")
     
-    # Create functions.py if missing
-    functions_path = directory / "functions.py"
-    if not functions_path.exists():
-        functions_path.write_text(create_example_function())
-        typer.echo("  Created functions.py with example functions")
-    else:
-        typer.echo("  functions.py already exists")
-    
-    # Create functions directory if missing
+    # Create functions directory and example functions if missing
     functions_dir = directory / "functions"
     if not functions_dir.exists():
         functions_dir.mkdir()
         typer.echo("  Created functions/ directory")
+    
+    # Create __init__.py if missing
+    init_file = functions_dir / "__init__.py"
+    if not init_file.exists():
+        init_file.write_text(
+            '"""\n'
+            "TinyBase Functions Package\n"
+            "\n"
+            "User-defined functions should be placed in individual files within this package.\n"
+            "Each function file can use uv's single-file script feature to define inline dependencies.\n"
+            '"""\n'
+        )
+        typer.echo("  Created functions/__init__.py")
+    
+    # Create example functions if they don't exist
+    example_functions = [
+        ("add_numbers.py", '''"""
+Add Numbers Function
+
+Example function demonstrating how to define a TinyBase function.
+"""
+
+from pydantic import BaseModel
+from tinybase.functions import Context, register
+
+
+class AddInput(BaseModel):
+    """Input model for add_numbers function."""
+    x: int
+    y: int
+
+
+class AddOutput(BaseModel):
+    """Output model for add_numbers function."""
+    sum: int
+
+
+@register(
+    name="add_numbers",
+    description="Add two numbers together",
+    auth="public",  # Available without authentication
+    input_model=AddInput,
+    output_model=AddOutput,
+    tags=["math", "example"],
+)
+def add_numbers(ctx: Context, payload: AddInput) -> AddOutput:
+    """
+    Add two numbers and return the sum.
+    
+    This is an example function showing how to:
+    - Define input/output models with Pydantic
+    - Use the @register decorator
+    - Access the Context object
+    """
+    return AddOutput(sum=payload.x + payload.y)
+'''),
+        ("hello.py", '''"""
+Hello World Function
+
+Example function demonstrating user context access.
+"""
+
+from pydantic import BaseModel
+from tinybase.functions import Context, register
+
+
+class HelloInput(BaseModel):
+    """Input model for hello function."""
+    name: str = "World"
+
+
+class HelloOutput(BaseModel):
+    """Output model for hello function."""
+    message: str
+    user_id: str | None = None
+
+
+@register(
+    name="hello",
+    description="Say hello to someone",
+    auth="auth",  # Requires authentication
+    input_model=HelloInput,
+    output_model=HelloOutput,
+    tags=["example"],
+)
+def hello(ctx: Context, payload: HelloInput) -> HelloOutput:
+    """
+    Return a greeting message.
+    
+    Demonstrates accessing user information from the context.
+    """
+    return HelloOutput(
+        message=f"Hello, {payload.name}!",
+        user_id=str(ctx.user_id) if ctx.user_id else None,
+    )
+'''),
+        ("fetch_url.py", '''# /// script
+# dependencies = [
+#   "requests>=2.32.0",
+# ]
+# ///
+
+"""
+Fetch URL Function
+
+Example function demonstrating uv's single-file script feature with inline dependencies.
+This function uses the requests library which is automatically installed when loaded.
+"""
+
+from pydantic import BaseModel
+from tinybase.functions import Context, register
+import requests
+
+
+class FetchUrlInput(BaseModel):
+    """Input model for fetch_url function."""
+    url: str
+    timeout: int = 10  # Timeout in seconds
+
+
+class FetchUrlOutput(BaseModel):
+    """Output model for fetch_url function."""
+    status_code: int
+    title: str | None = None
+    headers: dict[str, str]
+    success: bool
+    error: str | None = None
+
+
+@register(
+    name="fetch_url",
+    description="Fetch a URL and return its status, title, and headers",
+    auth="public",  # Available without authentication
+    input_model=FetchUrlInput,
+    output_model=FetchUrlOutput,
+    tags=["http", "example"],
+)
+def fetch_url(ctx: Context, payload: FetchUrlInput) -> FetchUrlOutput:
+    """
+    Fetch a URL and return its HTTP status, page title, and response headers.
+    
+    This function demonstrates:
+    - Using uv's inline dependency feature (requests library)
+    - Making HTTP requests
+    - Parsing HTML to extract the title
+    - Error handling
+    
+    The requests library is automatically installed when this function is loaded
+    thanks to the inline dependency declaration at the top of the file.
+    """
+    try:
+        response = requests.get(payload.url, timeout=payload.timeout)
+        response.raise_for_status()
+        
+        # Try to extract title from HTML
+        title = None
+        if "text/html" in response.headers.get("content-type", ""):
+            try:
+                import re
+                # Simple regex to extract title tag content
+                title_match = re.search(r'<title[^>]*>(.*?)</title>', response.text[:10000], re.IGNORECASE | re.DOTALL)
+                if title_match:
+                    title = title_match.group(1).strip()
+            except Exception:
+                pass
+        
+        # Convert headers to dict (requests returns CaseInsensitiveDict)
+        headers_dict = dict(response.headers)
+        
+        return FetchUrlOutput(
+            status_code=response.status_code,
+            title=title,
+            headers=headers_dict,
+            success=True,
+            error=None,
+        )
+    except requests.exceptions.RequestException as e:
+        return FetchUrlOutput(
+            status_code=0,
+            title=None,
+            headers={},
+            success=False,
+            error=str(e),
+        )
+'''),
+    ]
+    
+    for filename, content in example_functions:
+        func_file = functions_dir / filename
+        if not func_file.exists():
+            func_file.write_text(content)
+    
+    if any(not (functions_dir / name).exists() for name, _ in example_functions):
+        typer.echo("  Created example functions in functions/ directory")
     
     # Initialize database
     typer.echo("  Initializing database...")
@@ -393,18 +578,20 @@ def functions_new(
     ],
     description: Annotated[
         str,
-        typer.Option("--description", "-d", help="Function description")
+        typer.Option("--description", help="Function description")
     ] = "TODO: Add description",
-    file: Annotated[
+    functions_dir: Annotated[
         Path,
-        typer.Option("--file", "-f", help="Functions file to add to")
-    ] = Path("./functions.py"),
+        typer.Option("--dir", help="Functions directory (default: from config)")
+    ] = Path("./functions"),
 ) -> None:
     """
     Create a new function with boilerplate code.
     
-    Appends a new function template to the specified functions file.
+    Creates a new function file in the functions/ package directory.
     """
+    from tinybase.config import settings
+    
     # Validate function name
     if not re.match(r"^[a-z][a-z0-9_]*$", name):
         typer.echo(
@@ -413,26 +600,96 @@ def functions_new(
         )
         raise typer.Exit(1)
     
-    # Check if file exists
-    if not file.exists():
-        typer.echo(f"Error: Functions file not found: {file}", err=True)
-        typer.echo("Run 'tinybase init' first or specify a different file with --file")
+    # Use config functions_path if available, otherwise use provided dir
+    try:
+        config = settings()
+        functions_dir = Path(config.functions_path)
+    except Exception:
+        # If config can't be loaded, use provided dir or default
+        functions_dir = functions_dir.resolve()
+    
+    # Ensure functions directory exists
+    if not functions_dir.exists():
+        functions_dir.mkdir(parents=True)
+        typer.echo(f"Created functions directory: {functions_dir}")
+    
+    # Ensure __init__.py exists
+    init_file = functions_dir / "__init__.py"
+    if not init_file.exists():
+        init_file.write_text(
+            '"""\n'
+            "TinyBase Functions Package\n"
+            "\n"
+            "User-defined functions should be placed in individual files within this package.\n"
+            "Each function file can use uv's single-file script feature to define inline dependencies.\n"
+            '"""\n'
+        )
+    
+    # Create function file
+    func_file = functions_dir / f"{name}.py"
+    
+    if func_file.exists():
+        typer.echo(f"Error: Function file already exists: {func_file}", err=True)
         raise typer.Exit(1)
     
-    # Check if function already exists
-    content = file.read_text()
-    if f'name="{name}"' in content:
-        typer.echo(f"Error: Function '{name}' already exists in {file}", err=True)
-        raise typer.Exit(1)
+    # Check if function name is already registered (by checking other files)
+    for py_file in functions_dir.glob("*.py"):
+        if py_file.name.startswith("_"):
+            continue
+        try:
+            content = py_file.read_text()
+            if f'name="{name}"' in content:
+                typer.echo(
+                    f"Error: Function '{name}' already exists in {py_file.name}",
+                    err=True
+                )
+                raise typer.Exit(1)
+        except Exception:
+            pass
     
-    # Append boilerplate
-    boilerplate = create_function_boilerplate(name, description)
+    # Generate boilerplate
+    camel_name = snake_to_camel(name)
+    boilerplate = f'''"""
+{description}
+"""
+
+from pydantic import BaseModel
+from tinybase.functions import Context, register
+
+
+class {camel_name}Input(BaseModel):
+    """Input model for {name} function."""
+    # TODO: Define input fields
+    pass
+
+
+class {camel_name}Output(BaseModel):
+    """Output model for {name} function."""
+    # TODO: Define output fields
+    pass
+
+
+@register(
+    name="{name}",
+    description="{description}",
+    auth="auth",
+    input_model={camel_name}Input,
+    output_model={camel_name}Output,
+    tags=[],
+)
+def {name}(ctx: Context, payload: {camel_name}Input) -> {camel_name}Output:
+    """
+    {description}
     
-    with open(file, "a") as f:
-        f.write(boilerplate)
+    TODO: Implement function logic
+    """
+    return {camel_name}Output()
+'''
     
-    typer.echo(f"Created function '{name}' in {file}")
-    typer.echo(f"  Edit the {snake_to_camel(name)}Input and {snake_to_camel(name)}Output classes to define your schema")
+    func_file.write_text(boilerplate)
+    
+    typer.echo(f"Created function '{name}' in {func_file}")
+    typer.echo(f"  Edit the {camel_name}Input and {camel_name}Output classes to define your schema")
 
 
 @functions_app.command("deploy")

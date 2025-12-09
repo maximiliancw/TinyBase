@@ -7,7 +7,7 @@ It focuses on being:
 - Easy to deploy (single binary-like package, Docker-ready).
 - Easy to extend (Python-first, FastAPI-based).
 - Lightweight (SQLite, minimal dependencies).
-- Flexible (collections, typed functions, scheduling, admin UI).
+- Flexible – with custom collections, typed functions, scheduling, built-in admin UI, and much more.
 
 TinyBase is conceptually similar to PocketBase, but implemented in Python and designed for Python developers.
 
@@ -75,7 +75,7 @@ This will:
 - Create a `tinybase.toml` config file (if missing).
 - Initialize the SQLite database.
 - Optionally create an admin user.
-- Create a `functions.py` file with an example function, if not present.
+- Create a `functions/` package directory with example functions, if not present.
 
 Start the server:
 
@@ -116,7 +116,6 @@ token_ttl_hours = 24
 
 [functions]
 path = "./functions"
-file = "./functions.py"
 
 [scheduler]
 enabled = true
@@ -140,7 +139,6 @@ Corresponding environment variables (examples):
 - `TINYBASE_DB_URL`
 - `TINYBASE_AUTH_TOKEN_TTL_HOURS`
 - `TINYBASE_FUNCTIONS_PATH`
-- `TINYBASE_FUNCTIONS_FILE`
 - `TINYBASE_SCHEDULER_ENABLED`
 - `TINYBASE_SCHEDULER_INTERVAL_SECONDS`
 - `TINYBASE_CORS_ALLOW_ORIGINS`
@@ -155,9 +153,9 @@ Admin bootstrap (used by `tinybase init` if present):
 
 ## Defining Functions
 
-Functions are regular Python callables registered with a decorator and exposed as HTTP endpoints and scheduled tasks.
+Functions are regular Python callables registered with a decorator and exposed as HTTP endpoints and scheduled tasks. Each function should be in its own file within the `functions/` package directory.
 
-Example (`functions.py`):
+Example (`functions/add_numbers.py`):
 
 ```python
 from pydantic import BaseModel
