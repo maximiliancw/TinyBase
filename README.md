@@ -21,7 +21,7 @@
 
 # TinyBase
 
-TinyBase is a lightweight, self-hosted Backend-as-a-Service (BaaS) framework for Python developers.
+**TinyBase is a lightweight, self-hosted Backend-as-a-Service (BaaS) framework for Python developers.**
 
 It focuses on being:
 
@@ -30,9 +30,7 @@ It focuses on being:
 - Lightweight (SQLite, minimal dependencies).
 - Flexible – with custom collections, typed functions, scheduling, built-in admin UI, and much more.
 
-TinyBase is conceptually similar to PocketBase, but implemented in Python and designed for Python developers.
-
----
+> TinyBase has similarities to [PocketBase](https://pocketbase.io), but is implemented in Python and designed for Python developers.
 
 ## Features
 
@@ -63,8 +61,6 @@ TinyBase is conceptually similar to PocketBase, but implemented in Python and de
 - **uv-friendly**
   - Built for use with the `uv` tool (Astral) for dependency and script management.
 
----
-
 ## Installation
 
 Install from PyPI:
@@ -80,8 +76,6 @@ uv add tinybase
 ```
 
 For development, use `uv` to manage Python dependencies and `yarn` for the admin UI in `/app`.
-
----
 
 ## Quickstart
 
@@ -109,8 +103,6 @@ By default, TinyBase listens on:
 - `http://0.0.0.0:8000`
 - OpenAPI docs at `http://0.0.0.0:8000/docs`
 - Admin UI at `http://0.0.0.0:8000/admin` (after building the SPA).
-
----
 
 ## Configuration
 
@@ -171,8 +163,6 @@ Admin bootstrap (used by `tinybase init` if present):
 
 - `TINYBASE_ADMIN_EMAIL`
 - `TINYBASE_ADMIN_PASSWORD`
-
----
 
 ## Defining Functions
 
@@ -244,8 +234,6 @@ tinybase functions new my_function -d "My example function"
 
 This appends a typed function template to your `functions.py` file.
 
----
-
 ## Scheduling
 
 TinyBase supports scheduling functions using three methods:
@@ -301,8 +289,6 @@ Admin endpoints for schedules:
 
 > **Note:** The scheduler runs as a background loop in TinyBase and triggers functions according to their schedule, creating `FunctionCall` records for each invocation.
 
----
-
 ## Collections and Records
 
 TinyBase collections are **dynamic, schema-driven tables** stored in SQLite.
@@ -343,8 +329,6 @@ Associated endpoints:
 - `PATCH /api/collections/{collection_name}/records/{id}`
 - `DELETE /api/collections/{collection_name}/records/{id}`
 
----
-
 ## Admin UI
 
 The admin UI is a single-page application built with:
@@ -382,8 +366,6 @@ The admin UI allows administrators to:
 - Configure schedules.
 - Inspect function call metadata.
 
----
-
 ## Development
 
 ### Setup
@@ -418,13 +400,12 @@ tinybase init --admin-email admin@example.com --admin-password yourpassword
 tinybase serve --reload
 ```
 
----
-
 ## Deployment
 
 ### Docker
 
 The included `Dockerfile` uses a multi-stage build that:
+
 1. Builds the Vue admin UI with yarn
 2. Creates a minimal Python runtime using uv
 
@@ -437,8 +418,6 @@ docker run -p 8000:8000 tinybase
 
 > **The Docker image handles building the admin UI automatically.**
 
----
-
 ## Roadmap
 
 Planned improvements **may** include:
@@ -447,8 +426,6 @@ Planned improvements **may** include:
 - More advanced querying and filtering for records.
 - Extended function tooling (e.g. dependency inspection utilities).
 - Additional configuration presets for production deployments.
-
----
 
 ## License
 
