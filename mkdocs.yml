@@ -1,0 +1,204 @@
+# Project Information
+site_name: TinyBase
+site_url: https://maximiliancw.github.io/tinybase/
+site_author: Maximilian Wolf
+site_description: >-
+  A lightweight, self-hosted Backend-as-a-Service (BaaS) framework for Python developers.
+  SQLite-backed, FastAPI-powered, and designed for simplicity.
+
+# Repository
+repo_name: maximiliancw/tinybase
+repo_url: https://github.com/maximiliancw/tinybase
+edit_uri: edit/main/docs/
+
+# Copyright
+copyright: Copyright &copy; 2024 Maximilian Wolf
+
+# Configuration
+theme:
+  name: material
+  language: en
+  features:
+    - announce.dismiss
+    - content.action.edit
+    - content.action.view
+    - content.code.annotate
+    - content.code.copy
+    - content.code.select
+    - content.tabs.link
+    - content.tooltips
+    - header.autohide
+    - navigation.expand
+    - navigation.footer
+    - navigation.indexes
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.progress
+    - navigation.prune
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - search.suggest
+    - toc.follow
+  palette:
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    logo: material/database
+    repo: fontawesome/brands/github
+  favicon: assets/favicon.svg
+
+# Plugins
+plugins:
+  - search:
+      separator: '[\s\u200b\-_,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+  - minify:
+      minify_html: true
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            members_order: source
+            merge_init_into_class: true
+            separate_signature: true
+            signature_crossrefs: true
+            annotations_path: brief
+
+# Extensions
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      normalize_issue_symbols: true
+      repo_url_shorthand: true
+      user: maximiliancw
+      repo: tinybase
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets:
+      auto_append:
+        - includes/abbreviations.md
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+      combine_header_slug: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+# Page Tree
+nav:
+  - Home: index.md
+  - Getting Started:
+    - getting-started/index.md
+    - Installation: getting-started/installation.md
+    - Quickstart: getting-started/quickstart.md
+    - Configuration: getting-started/configuration.md
+  - User Guide:
+    - guide/index.md
+    - Collections: guide/collections.md
+    - Functions: guide/functions.md
+    - Scheduling: guide/scheduling.md
+    - Authentication: guide/authentication.md
+    - Admin UI: guide/admin-ui.md
+    - Extensions: guide/extensions.md
+  - Deployment:
+    - deployment/index.md
+    - Docker: deployment/docker.md
+    - Production: deployment/production.md
+  - API Reference:
+    - reference/index.md
+    - REST API: reference/rest-api.md
+    - CLI Reference: reference/cli.md
+    - Python API: reference/python-api.md
+  - Contributing:
+    - contributing/index.md
+    - Development Setup: contributing/development.md
+    - Architecture: contributing/architecture.md
+    - Code Style: contributing/code-style.md
+    - Testing: contributing/testing.md
+
+# Extra
+extra:
+  version:
+    provider: mike
+    default: latest
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/maximiliancw/tinybase
+      name: TinyBase on GitHub
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/tinybase/
+      name: TinyBase on PyPI
+  analytics:
+    provider: google
+    property: !ENV [GOOGLE_ANALYTICS_KEY, '']
+  consent:
+    title: Cookie consent
+    description: >-
+      We use cookies to recognize your repeated visits and preferences, as well
+      as to measure the effectiveness of our documentation and whether users
+      find what they're searching for. With your consent, you're helping us to
+      make our documentation better.
+
+extra_css:
+  - stylesheets/extra.css
+

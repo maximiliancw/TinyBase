@@ -1,0 +1,111 @@
+/* Hero section */
+.hero {
+  text-align: center;
+  padding: 2rem 0 3rem;
+}
+
+.hero h2 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.hero p {
+  font-size: 1.2rem;
+  color: var(--md-default-fg-color--light);
+  max-width: 600px;
+  margin: 0 auto 2rem;
+}
+
+/* Feature grid enhancements */
+.grid.cards {
+  margin-top: 2rem;
+}
+
+.grid.cards > ul > li {
+  border-radius: 8px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.grid.cards > ul > li:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* Code block improvements */
+.highlight code {
+  font-size: 0.85rem;
+}
+
+/* Admonition improvements */
+.admonition {
+  border-radius: 8px;
+}
+
+/* Table styling */
+.md-typeset table:not([class]) {
+  font-size: 0.8rem;
+}
+
+.md-typeset table:not([class]) th {
+  background-color: var(--md-primary-fg-color);
+  color: var(--md-primary-bg-color);
+}
+
+/* Navigation improvements */
+.md-nav__link {
+  font-size: 0.85rem;
+}
+
+/* Footer */
+.md-footer {
+  margin-top: 3rem;
+}
+
+/* Custom badge styling */
+.md-typeset .badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.md-typeset .badge--primary {
+  background-color: var(--md-primary-fg-color);
+  color: var(--md-primary-bg-color);
+}
+
+.md-typeset .badge--success {
+  background-color: #4caf50;
+  color: white;
+}
+
+.md-typeset .badge--warning {
+  background-color: #ff9800;
+  color: white;
+}
+
+/* API Reference styling */
+.doc-symbol {
+  font-family: var(--md-code-font-family);
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 76.1875em) {
+  .hero h2 {
+    font-size: 2rem;
+  }
+}
+
+@media screen and (max-width: 44.9375em) {
+  .hero h2 {
+    font-size: 1.5rem;
+  }
+  
+  .hero p {
+    font-size: 1rem;
+  }
+}
+

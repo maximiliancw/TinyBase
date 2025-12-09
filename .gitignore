@@ -78,3 +78,6 @@ Thumbs.db
 # Built admin static (populated at build time)
 tinybase/admin_static/*
 !tinybase/admin_static/.gitkeep
+
+# MkDocs documentation site
+site/
