@@ -2,20 +2,17 @@
   <img src="logo.png" alt="TinyBase Logo" width="200" />
 </p>
 <p align="center">
+  <a href="https://github.com/maximiliancw/TinyBase/blob/main/LICENSE" target="_blank">
+    <img alt="License" src="https://img.shields.io/github/license/maximiliancw/TinyBase">
+  </a>
   <a href="https://pypi.org/project/tinybase/" target="_blank">
     <img src="https://img.shields.io/pypi/v/tinybase.svg?label=PyPI&color=blue" alt="PyPI">
   </a>
   <a href="https://github.com/maximiliancw/TinyBase/actions/workflows/ci.yml" target="_blank">
     <img src="https://github.com/maximiliancw/TinyBase/actions/workflows/ci.yml/badge.svg" alt="CI">
   </a>
-  <a href="https://github.com/maximiliancw/TinyBase/blob/main/LICENSE" target="_blank">
-    <img alt="License" src="https://img.shields.io/github/license/maximiliancw/TinyBase">
-  </a>
-  <a href="https://codecov.io/gh/maximiliancw/TinyBase" target="_blank">
-    <img src="https://codecov.io/gh/maximiliancw/TinyBase/branch/main/graph/badge.svg" alt="codecov">
-  </a>
-  <a href="https://maximiliancw.github.io/tinybase" target="_blank">
-    <img src="https://img.shields.io/website?down_color=red&down_message=offline&up_color=green&up_message=online&url=https%3A%2F%2Fmaximiliancw.github.io%2Ftinybase" alt="Website">
+  <a href="https://maximiliancw.github.io/TinyBase/" target="_blank">
+    <img alt="Docs" src="https://img.shields.io/website?url=https%3A%2F%2Fmaximiliancw.github.io%2FTinyBase%2F">
   </a>
 </p>
 
@@ -30,7 +27,7 @@ It focuses on being:
 - Lightweight (SQLite, minimal dependencies).
 - Flexible – with custom collections, typed functions, scheduling, built-in admin UI, and much more.
 
-> TinyBase has similarities to [PocketBase](https://pocketbase.io), but is implemented in Python and designed for Python developers.
+> 👉 Read the docs: [https://maximiliancw.github.io/TinyBase/](https://maximiliancw.github.io/TinyBase/)
 
 ## Features
 
