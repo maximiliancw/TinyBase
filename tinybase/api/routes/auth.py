@@ -84,9 +84,33 @@ class SetupStatusResponse(BaseModel):
     needs_setup: bool = Field(description="Whether initial setup is needed (no users exist)")
 
 
+class InstanceInfoResponse(BaseModel):
+    """Public instance information."""
+    
+    instance_name: str = Field(description="The name of this TinyBase instance")
+
+
 # =============================================================================
 # Routes
 # =============================================================================
+
+
+@router.get(
+    "/instance-info",
+    response_model=InstanceInfoResponse,
+    summary="Get public instance info",
+    description="Get public information about this TinyBase instance (no auth required).",
+)
+def get_instance_info(session: DbSession) -> InstanceInfoResponse:
+    """
+    Get public instance information.
+    
+    Returns the instance name configured in settings.
+    This endpoint does not require authentication.
+    """
+    settings = session.get(InstanceSettings, 1)
+    instance_name = settings.instance_name if settings else "TinyBase"
+    return InstanceInfoResponse(instance_name=instance_name)
 
 
 @router.get(

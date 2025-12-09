@@ -5,7 +5,7 @@
  * Provides the main layout with sidebar navigation and router outlet.
  * Features premium styling with SVG icons and refined interactions.
  */
-import { computed } from "vue";
+import { computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "./stores/auth";
 
@@ -16,6 +16,10 @@ const showSidebar = computed(() => {
   return (
     authStore.isAuthenticated && router.currentRoute.value.name !== "login"
   );
+});
+
+onMounted(async () => {
+  await authStore.fetchInstanceInfo();
 });
 
 function handleLogout() {
@@ -36,7 +40,7 @@ function handleLogout() {
             <line x1="12" y1="22.08" x2="12" y2="12"/>
           </svg>
         </div>
-        <h1>TinyBase</h1>
+        <h1>{{ authStore.instanceName }}</h1>
       </header>
 
       <nav aria-label="Main navigation">

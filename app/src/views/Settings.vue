@@ -7,6 +7,9 @@
  */
 import { onMounted, ref, reactive } from 'vue'
 import { api } from '../api'
+import { useAuthStore } from '../stores/auth'
+
+const authStore = useAuthStore()
 
 interface InstanceSettings {
   instance_name: string
@@ -103,6 +106,9 @@ async function saveSettings() {
     // Clear credential fields after save
     storageAccessKey.value = ''
     storageSecretKey.value = ''
+    
+    // Update instance name in sidebar
+    await authStore.fetchInstanceInfo()
     
     success.value = 'Settings saved successfully'
     setTimeout(() => { success.value = null }, 3000)

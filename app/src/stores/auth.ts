@@ -23,6 +23,7 @@ export const useAuthStore = defineStore('auth', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
   const adminCreated = ref(false)
+  const instanceName = ref<string>('TinyBase')
 
   // Getters
   const isAuthenticated = computed(() => !!token.value && !!user.value)
@@ -83,6 +84,16 @@ export const useAuthStore = defineStore('auth', () => {
     adminCreated.value = false
   }
 
+  async function fetchInstanceInfo(): Promise<void> {
+    try {
+      const response = await api.get('/api/auth/instance-info')
+      instanceName.value = response.data.instance_name
+    } catch (err) {
+      // Fallback to default name if fetch fails
+      instanceName.value = 'TinyBase'
+    }
+  }
+
   return {
     // State
     token,
@@ -90,6 +101,7 @@ export const useAuthStore = defineStore('auth', () => {
     loading,
     error,
     adminCreated,
+    instanceName,
     // Getters
     isAuthenticated,
     isAdmin,
@@ -98,6 +110,7 @@ export const useAuthStore = defineStore('auth', () => {
     fetchUser,
     logout,
     clearAdminCreated,
+    fetchInstanceInfo,
   }
 })
 

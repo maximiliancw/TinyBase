@@ -20,14 +20,14 @@ const needsSetup = ref(false)
 const checkingSetup = ref(true)
 
 onMounted(async () => {
-  try {
-    const response = await api.get('/api/auth/setup-status')
-    needsSetup.value = response.data.needs_setup
-  } catch {
-    // Ignore errors, just don't show the setup message
-  } finally {
-    checkingSetup.value = false
-  }
+  // Fetch instance name and setup status in parallel
+  await Promise.all([
+    authStore.fetchInstanceInfo(),
+    api.get('/api/auth/setup-status')
+      .then(response => { needsSetup.value = response.data.needs_setup })
+      .catch(() => { /* Ignore errors */ })
+  ])
+  checkingSetup.value = false
 })
 
 async function handleLogin() {
@@ -58,7 +58,7 @@ async function handleLogin() {
             <line x1="12" y1="22.08" x2="12" y2="12"/>
           </svg>
         </div>
-        <h1>TinyBase</h1>
+        <h1>{{ authStore.instanceName }}</h1>
         <p>Admin Dashboard</p>
       </div>
       

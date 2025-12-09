@@ -48,7 +48,7 @@ main {
 }
 
 /* Constrain content width for readability */
-main > div {
+main > div:not(.login-layout) {
   max-width: 1200px;
 }
 
