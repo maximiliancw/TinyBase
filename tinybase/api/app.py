@@ -9,10 +9,14 @@ import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
-from tinybase.api.routes import admin, auth, collections, functions, schedules
+from tinybase.api.routes import admin, auth, collections, files, functions, schedules
 from tinybase.api.routes.static_admin import mount_admin_ui
 from tinybase.collections.service import load_collections_into_registry
 from tinybase.config import settings
@@ -20,6 +24,9 @@ from tinybase.db.core import create_db_and_tables, get_engine
 from tinybase.functions.loader import load_functions_from_settings
 from tinybase.scheduler import start_scheduler, stop_scheduler
 from tinybase.version import __version__
+
+# Rate limiter instance
+limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 
 # Configure logging
 logging.basicConfig(
@@ -97,6 +104,10 @@ def create_app() -> FastAPI:
         openapi_url="/openapi.json",
     )
     
+    # Configure rate limiting
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    
     # Configure CORS
     if config.cors_allow_origins:
         app.add_middleware(
@@ -113,6 +124,7 @@ def create_app() -> FastAPI:
     app.include_router(functions.router, prefix="/api")
     app.include_router(admin.router, prefix="/api")
     app.include_router(schedules.router, prefix="/api")
+    app.include_router(files.router, prefix="/api")
     
     # Mount admin UI
     admin_mounted = mount_admin_ui(app)

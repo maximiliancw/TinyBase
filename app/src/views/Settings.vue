@@ -1,0 +1,322 @@
+<script setup lang="ts">
+/**
+ * Settings View
+ * 
+ * Admin page for configuring instance settings.
+ * Uses semantic HTML elements following PicoCSS conventions.
+ */
+import { onMounted, ref, reactive } from 'vue'
+import { api } from '../api'
+
+interface InstanceSettings {
+  instance_name: string
+  allow_public_registration: boolean
+  server_timezone: string
+  storage_enabled: boolean
+  storage_endpoint: string | null
+  storage_bucket: string | null
+  storage_region: string | null
+  updated_at: string
+}
+
+const loading = ref(true)
+const saving = ref(false)
+const error = ref<string | null>(null)
+const success = ref<string | null>(null)
+
+const settings = reactive<InstanceSettings>({
+  instance_name: 'TinyBase',
+  allow_public_registration: true,
+  server_timezone: 'UTC',
+  storage_enabled: false,
+  storage_endpoint: null,
+  storage_bucket: null,
+  storage_region: null,
+  updated_at: '',
+})
+
+// Storage credentials (not returned by API, only for updates)
+const storageAccessKey = ref('')
+const storageSecretKey = ref('')
+
+// Common timezones for selection
+const commonTimezones = [
+  'UTC',
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'Europe/London',
+  'Europe/Paris',
+  'Europe/Berlin',
+  'Asia/Tokyo',
+  'Asia/Shanghai',
+  'Asia/Singapore',
+  'Australia/Sydney',
+]
+
+onMounted(async () => {
+  await fetchSettings()
+})
+
+async function fetchSettings() {
+  loading.value = true
+  error.value = null
+  
+  try {
+    const response = await api.get('/api/admin/settings')
+    Object.assign(settings, response.data)
+  } catch (err: any) {
+    error.value = err.response?.data?.detail || 'Failed to load settings'
+  } finally {
+    loading.value = false
+  }
+}
+
+async function saveSettings() {
+  saving.value = true
+  error.value = null
+  success.value = null
+  
+  try {
+    const payload: Record<string, any> = {
+      instance_name: settings.instance_name,
+      allow_public_registration: settings.allow_public_registration,
+      server_timezone: settings.server_timezone,
+      storage_enabled: settings.storage_enabled,
+      storage_endpoint: settings.storage_endpoint,
+      storage_bucket: settings.storage_bucket,
+      storage_region: settings.storage_region,
+    }
+    
+    // Only include credentials if they're filled in
+    if (storageAccessKey.value) {
+      payload.storage_access_key = storageAccessKey.value
+    }
+    if (storageSecretKey.value) {
+      payload.storage_secret_key = storageSecretKey.value
+    }
+    
+    const response = await api.patch('/api/admin/settings', payload)
+    Object.assign(settings, response.data)
+    
+    // Clear credential fields after save
+    storageAccessKey.value = ''
+    storageSecretKey.value = ''
+    
+    success.value = 'Settings saved successfully'
+    setTimeout(() => { success.value = null }, 3000)
+  } catch (err: any) {
+    error.value = err.response?.data?.detail || 'Failed to save settings'
+  } finally {
+    saving.value = false
+  }
+}
+</script>
+
+<template>
+  <div data-animate="fade-in">
+    <header class="page-header">
+      <h1>Settings</h1>
+      <p>Configure your TinyBase instance</p>
+    </header>
+    
+    <!-- Loading State -->
+    <article v-if="loading" aria-busy="true">
+      Loading settings...
+    </article>
+    
+    <form v-else @submit.prevent="saveSettings">
+      <!-- General Settings -->
+      <article>
+        <header>
+          <h3>General</h3>
+        </header>
+        
+        <label for="instance_name">
+          Instance Name
+          <input
+            id="instance_name"
+            v-model="settings.instance_name"
+            type="text"
+            maxlength="100"
+          />
+          <small>The name displayed in the admin UI and API responses.</small>
+        </label>
+      </article>
+      
+      <!-- Authentication Settings -->
+      <article>
+        <header>
+          <h3>Authentication</h3>
+        </header>
+        
+        <label>
+          <input
+            type="checkbox"
+            v-model="settings.allow_public_registration"
+            role="switch"
+          />
+          Allow Public Registration
+        </label>
+        <small class="text-muted">
+          When enabled, anyone can register for an account. When disabled, only admins can create users.
+        </small>
+      </article>
+      
+      <!-- Timezone Settings -->
+      <article>
+        <header>
+          <h3>Timezone</h3>
+        </header>
+        
+        <label for="server_timezone">
+          Server Timezone
+          <select id="server_timezone" v-model="settings.server_timezone">
+            <option v-for="tz in commonTimezones" :key="tz" :value="tz">
+              {{ tz }}
+            </option>
+          </select>
+          <small>Default timezone for scheduled functions. Individual schedules can override this.</small>
+        </label>
+      </article>
+      
+      <!-- Storage Settings -->
+      <article>
+        <header>
+          <h3>File Storage (S3-compatible)</h3>
+        </header>
+        
+        <label>
+          <input
+            type="checkbox"
+            v-model="settings.storage_enabled"
+            role="switch"
+          />
+          Enable File Storage
+        </label>
+        <small class="text-muted mb-3">
+          Enable S3-compatible file storage for file uploads.
+        </small>
+        
+        <div v-if="settings.storage_enabled" class="storage-fields">
+          <label for="storage_endpoint">
+            Endpoint URL
+            <input
+              id="storage_endpoint"
+              v-model="settings.storage_endpoint"
+              type="url"
+              placeholder="https://s3.amazonaws.com or https://your-minio-server:9000"
+            />
+          </label>
+          
+          <div class="grid">
+            <label for="storage_bucket">
+              Bucket Name
+              <input
+                id="storage_bucket"
+                v-model="settings.storage_bucket"
+                type="text"
+                placeholder="my-bucket"
+              />
+            </label>
+            
+            <label for="storage_region">
+              Region
+              <input
+                id="storage_region"
+                v-model="settings.storage_region"
+                type="text"
+                placeholder="us-east-1"
+              />
+            </label>
+          </div>
+          
+          <div class="grid">
+            <label for="storage_access_key">
+              Access Key
+              <input
+                id="storage_access_key"
+                v-model="storageAccessKey"
+                type="password"
+                placeholder="Leave empty to keep existing"
+              />
+            </label>
+            
+            <label for="storage_secret_key">
+              Secret Key
+              <input
+                id="storage_secret_key"
+                v-model="storageSecretKey"
+                type="password"
+                placeholder="Leave empty to keep existing"
+              />
+            </label>
+          </div>
+        </div>
+      </article>
+      
+      <!-- Status Messages -->
+      <ins v-if="success" class="pico-background-green-500">
+        {{ success }}
+      </ins>
+      
+      <del v-if="error" class="pico-background-red-500">
+        {{ error }}
+      </del>
+      
+      <!-- Save Footer -->
+      <article class="save-footer">
+        <small class="text-muted">
+          Last updated: {{ settings.updated_at ? new Date(settings.updated_at).toLocaleString() : 'Never' }}
+        </small>
+        <button type="submit" :aria-busy="saving" :disabled="saving">
+          {{ saving ? '' : 'Save Settings' }}
+        </button>
+      </article>
+    </form>
+  </div>
+</template>
+
+<style scoped>
+article {
+  margin-bottom: var(--tb-spacing-lg);
+}
+
+.storage-fields {
+  margin-top: var(--tb-spacing-lg);
+  padding-top: var(--tb-spacing-lg);
+  border-top: 1px solid var(--tb-border);
+}
+
+.save-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Alert styles using Pico's ins/del for success/error */
+ins, del {
+  display: block;
+  padding: var(--tb-spacing-sm) var(--tb-spacing-md);
+  border-radius: var(--tb-radius);
+  margin-bottom: var(--tb-spacing-lg);
+  text-decoration: none;
+}
+
+ins {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--tb-success);
+  border: 1px solid var(--tb-success);
+}
+
+del {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--tb-error);
+  border: 1px solid var(--tb-error);
+}
+
+.mb-3 {
+  margin-bottom: var(--tb-spacing-lg);
+}
+</style>

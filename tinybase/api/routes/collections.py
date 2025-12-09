@@ -13,7 +13,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field, ValidationError
 
 from tinybase.auth import CurrentAdminUser, CurrentUser, CurrentUserOptional, DbSession
-from tinybase.collections.service import CollectionService
+from tinybase.collections.service import CollectionService, check_access
 
 router = APIRouter(prefix="/collections", tags=["Collections"])
 
@@ -290,6 +290,8 @@ def list_records(
     _user: CurrentUserOptional,
     limit: int = Query(default=100, ge=1, le=1000, description="Page size"),
     offset: int = Query(default=0, ge=0, description="Page offset"),
+    sort_by: str | None = Query(default=None, description="Sort by field (created_at, updated_at)"),
+    sort_order: str = Query(default="desc", pattern="^(asc|desc)$", description="Sort order"),
 ) -> RecordListResponse:
     """List records in a collection with pagination."""
     service = CollectionService(session)
@@ -301,10 +303,24 @@ def list_records(
             detail=f"Collection '{collection_name}' not found",
         )
     
+    # Check access
+    if not check_access(
+        collection,
+        "list",
+        user_id=_user.id if _user else None,
+        is_admin=_user.is_admin if _user else False,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied",
+        )
+    
     records, total = service.list_records(
         collection=collection,
         limit=limit,
         offset=offset,
+        sort_by=sort_by,
+        sort_order=sort_order,
     )
     
     return RecordListResponse(
@@ -336,6 +352,18 @@ def create_record(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Collection '{collection_name}' not found",
+        )
+    
+    # Check access
+    if not check_access(
+        collection,
+        "create",
+        user_id=user.id,
+        is_admin=user.is_admin,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied",
         )
     
     try:
@@ -383,6 +411,19 @@ def get_record(
             detail=f"Record '{record_id}' not found",
         )
     
+    # Check access
+    if not check_access(
+        collection,
+        "read",
+        user_id=_user.id if _user else None,
+        is_admin=_user.is_admin if _user else False,
+        record_owner_id=record.owner_id,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied",
+        )
+    
     return record_to_response(record)
 
 
@@ -417,8 +458,14 @@ def update_record(
             detail=f"Record '{record_id}' not found",
         )
     
-    # Check ownership (unless admin)
-    if record.owner_id != user.id and not user.is_admin:
+    # Check access using collection rules
+    if not check_access(
+        collection,
+        "update",
+        user_id=user.id,
+        is_admin=user.is_admin,
+        record_owner_id=record.owner_id,
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to update this record",
@@ -470,8 +517,14 @@ def delete_record(
             detail=f"Record '{record_id}' not found",
         )
     
-    # Check ownership (unless admin)
-    if record.owner_id != user.id and not user.is_admin:
+    # Check access using collection rules
+    if not check_access(
+        collection,
+        "delete",
+        user_id=user.id,
+        is_admin=user.is_admin,
+        record_owner_id=record.owner_id,
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to delete this record",

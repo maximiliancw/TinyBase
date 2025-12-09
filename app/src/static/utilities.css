@@ -1,0 +1,47 @@
+/**
+ * Utility Classes
+ * 
+ * Keep minimal - prefer semantic HTML + Pico defaults.
+ * Only include utilities that are truly reusable.
+ */
+
+/* Text colors (for semantic status, not arbitrary styling) */
+.text-success { color: var(--tb-success); }
+.text-warning { color: var(--tb-warning); }
+.text-error { color: var(--tb-error); }
+.text-muted { color: var(--pico-muted-color); }
+
+/* Spacing utilities (use sparingly) */
+.mt-0 { margin-top: 0; }
+.mt-1 { margin-top: var(--tb-spacing-sm); }
+.mt-2 { margin-top: var(--tb-spacing-md); }
+.mt-3 { margin-top: var(--tb-spacing-lg); }
+
+.mb-0 { margin-bottom: 0; }
+.mb-1 { margin-bottom: var(--tb-spacing-sm); }
+.mb-2 { margin-bottom: var(--tb-spacing-md); }
+.mb-3 { margin-bottom: var(--tb-spacing-lg); }
+
+/* Text alignment */
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+
+/* Visibility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Full width button */
+button.full-width,
+[role="button"].full-width {
+  width: 100%;
+}
+

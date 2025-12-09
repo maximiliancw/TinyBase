@@ -16,7 +16,12 @@ from sqlmodel import Session, select
 
 from tinybase.config import settings
 from tinybase.db.core import get_session
-from tinybase.db.models import AuthToken, User, utcnow
+from tinybase.db.models import AuthToken, User
+from tinybase.utils import utcnow
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Bearer token security scheme for FastAPI
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -211,4 +216,40 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 CurrentUserOptional = Annotated[User | None, Depends(get_current_user_optional)]
 CurrentAdminUser = Annotated[User, Depends(get_current_admin_user)]
 DbSession = Annotated[Session, Depends(get_session)]
+
+
+# =============================================================================
+# Token Cleanup
+# =============================================================================
+
+
+def cleanup_expired_tokens(session: Session) -> int:
+    """
+    Remove expired authentication tokens from the database.
+    
+    Args:
+        session: Database session.
+    
+    Returns:
+        Number of tokens deleted.
+    """
+    now = utcnow()
+    
+    # Find and delete expired tokens
+    expired_tokens = session.exec(
+        select(AuthToken).where(
+            AuthToken.expires_at != None,  # noqa: E711
+            AuthToken.expires_at < now,
+        )
+    ).all()
+    
+    count = len(expired_tokens)
+    for token in expired_tokens:
+        session.delete(token)
+    
+    if count > 0:
+        session.commit()
+        logger.info(f"Cleaned up {count} expired auth tokens")
+    
+    return count
 

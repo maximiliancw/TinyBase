@@ -3,6 +3,7 @@
  * Dashboard View
  * 
  * Overview page showing key metrics and quick links.
+ * Uses semantic HTML elements following PicoCSS conventions.
  */
 import { onMounted, ref } from 'vue'
 import { useCollectionsStore } from '../stores/collections'
@@ -20,7 +21,14 @@ const stats = ref({
   activeSchedules: 0,
 })
 
+const showAdminCreatedNotice = ref(authStore.adminCreated)
+
 onMounted(async () => {
+  // Clear the flag after showing
+  if (authStore.adminCreated) {
+    authStore.clearAdminCreated()
+  }
+  
   await collectionsStore.fetchCollections()
   await functionsStore.fetchFunctions()
   
@@ -35,65 +43,83 @@ onMounted(async () => {
     stats.value.activeSchedules = functionsStore.schedules.filter(s => s.is_active).length
   }
 })
+
+function dismissNotice() {
+  showAdminCreatedNotice.value = false
+}
 </script>
 
 <template>
-  <div class="fade-in">
+  <div data-animate="fade-in">
+    <!-- Admin Created Notice -->
+    <article v-if="showAdminCreatedNotice" data-status="success" class="notice mb-3">
+      <div class="notice-content">
+        <strong>🎉 Admin account created!</strong>
+        <p>No users existed, so an admin account was automatically created with your credentials.</p>
+      </div>
+      <button class="secondary small" @click="dismissNotice">Dismiss</button>
+    </article>
+    
     <header class="page-header">
       <h1>Dashboard</h1>
       <p>Welcome to TinyBase Admin</p>
     </header>
     
+    <!-- Stats Grid - uses article for cards (Pico's card element) -->
     <div class="stats-grid">
-      <div class="stat-card">
-        <p class="stat-value">{{ stats.collections }}</p>
-        <p class="stat-label">Collections</p>
-      </div>
-      <div class="stat-card">
-        <p class="stat-value">{{ stats.functions }}</p>
-        <p class="stat-label">Functions</p>
-      </div>
-      <div v-if="authStore.isAdmin" class="stat-card">
-        <p class="stat-value">{{ stats.activeSchedules }}</p>
-        <p class="stat-label">Active Schedules</p>
-      </div>
-      <div v-if="authStore.isAdmin" class="stat-card">
-        <p class="stat-value">{{ stats.recentCalls }}</p>
-        <p class="stat-label">Total Function Calls</p>
-      </div>
+      <article class="stat-card">
+        <p>{{ stats.collections }}</p>
+        <p>Collections</p>
+      </article>
+      <article class="stat-card">
+        <p>{{ stats.functions }}</p>
+        <p>Functions</p>
+      </article>
+      <article v-if="authStore.isAdmin" class="stat-card">
+        <p>{{ stats.activeSchedules }}</p>
+        <p>Active Schedules</p>
+      </article>
+      <article v-if="authStore.isAdmin" class="stat-card">
+        <p>{{ stats.recentCalls }}</p>
+        <p>Total Function Calls</p>
+      </article>
     </div>
     
-    <div class="card">
-      <div class="card-header">
-        <h3 class="card-title">Quick Actions</h3>
+    <!-- Quick Actions Card -->
+    <article>
+      <header>
+        <h3>Quick Actions</h3>
+      </header>
+      <div role="group">
+        <router-link to="/collections" role="button" class="secondary">
+          <span aria-hidden="true">📁</span> View Collections
+        </router-link>
+        <router-link to="/functions" role="button" class="secondary">
+          <span aria-hidden="true">⚡</span> View Functions
+        </router-link>
+        <router-link v-if="authStore.isAdmin" to="/users" role="button" class="secondary">
+          <span aria-hidden="true">👥</span> Manage Users
+        </router-link>
       </div>
-      <div class="flex gap-2">
-        <router-link to="/collections" class="btn btn-secondary">
-          📁 View Collections
-        </router-link>
-        <router-link to="/functions" class="btn btn-secondary">
-          ⚡ View Functions
-        </router-link>
-        <router-link v-if="authStore.isAdmin" to="/users" class="btn btn-secondary">
-          👥 Manage Users
-        </router-link>
-      </div>
-    </div>
+    </article>
     
-    <div class="card">
-      <div class="card-header">
-        <h3 class="card-title">Recent Collections</h3>
-        <router-link to="/collections" class="btn btn-sm btn-secondary">
+    <!-- Recent Collections Card -->
+    <article>
+      <header>
+        <h3>Recent Collections</h3>
+        <router-link to="/collections" role="button" class="secondary small">
           View All
         </router-link>
-      </div>
-      <div v-if="collectionsStore.collections.length === 0" class="empty-state">
+      </header>
+      
+      <div v-if="collectionsStore.collections.length === 0" data-empty data-empty-icon="📁">
         <p>No collections yet</p>
-        <router-link to="/collections" class="btn btn-primary btn-sm mt-2">
+        <router-link to="/collections" role="button" class="small mt-2">
           Create Collection
         </router-link>
       </div>
-      <table v-else class="data-table">
+      
+      <table v-else>
         <thead>
           <tr>
             <th>Name</th>
@@ -113,7 +139,6 @@ onMounted(async () => {
           </tr>
         </tbody>
       </table>
-    </div>
+    </article>
   </div>
 </template>
-

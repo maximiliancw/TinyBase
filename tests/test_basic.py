@@ -4,73 +4,7 @@ Basic tests for TinyBase.
 These tests verify the core functionality works correctly.
 """
 
-import os
-import tempfile
 import pytest
-from fastapi.testclient import TestClient
-from sqlmodel import Session
-
-
-@pytest.fixture(scope="function")
-def client():
-    """Create a test client with a fresh database."""
-    # Create a temporary database file
-    db_fd, db_path = tempfile.mkstemp(suffix=".db")
-    os.close(db_fd)
-    
-    # Set environment variables before importing tinybase modules
-    os.environ["TINYBASE_DB_URL"] = f"sqlite:///{db_path}"
-    os.environ["TINYBASE_SCHEDULER_ENABLED"] = "false"
-    
-    # Import after setting env vars
-    from tinybase.config import reload_settings
-    from tinybase.db.core import reset_engine, create_db_and_tables, get_engine
-    from tinybase.db.models import User
-    from tinybase.auth import hash_password
-    from tinybase.api.app import create_app
-    from tinybase.functions.core import reset_global_registry
-    from tinybase.collections.schemas import reset_registry
-    
-    # Reset everything
-    reset_engine()
-    reset_global_registry()
-    reset_registry()
-    reload_settings()
-    
-    # Create tables
-    create_db_and_tables()
-    
-    # Create test admin user
-    engine = get_engine()
-    with Session(engine) as session:
-        admin = User(
-            email="admin@test.com",
-            password_hash=hash_password("testpassword"),
-            is_admin=True,
-        )
-        session.add(admin)
-        session.commit()
-    
-    # Create app
-    app = create_app()
-    
-    with TestClient(app) as test_client:
-        yield test_client
-    
-    # Cleanup
-    reset_engine()
-    reset_global_registry()
-    reset_registry()
-    
-    # Remove temp database
-    try:
-        os.unlink(db_path)
-    except Exception:
-        pass
-    
-    # Reset env vars
-    os.environ.pop("TINYBASE_DB_URL", None)
-    os.environ.pop("TINYBASE_SCHEDULER_ENABLED", None)
 
 
 def test_root_endpoint(client):
@@ -164,3 +98,43 @@ def test_functions_list(client):
     assert response.status_code == 200
     # Functions might be empty or contain example functions
     assert isinstance(response.json(), list)
+
+
+def test_users_list_requires_admin(client):
+    """Test that listing users requires admin."""
+    # Register a regular user
+    client.post("/api/auth/register", json={
+        "email": "regular@test.com",
+        "password": "testpassword123",
+    })
+    
+    login_response = client.post("/api/auth/login", json={
+        "email": "regular@test.com",
+        "password": "testpassword123",
+    })
+    token = login_response.json()["token"]
+    
+    # Try to list users
+    response = client.get(
+        "/api/admin/users",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 403
+
+
+def test_admin_can_list_users(client):
+    """Test that admin can list users."""
+    login_response = client.post("/api/auth/login", json={
+        "email": "admin@test.com",
+        "password": "testpassword",
+    })
+    token = login_response.json()["token"]
+    
+    response = client.get(
+        "/api/admin/users",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "users" in data
+    assert data["total"] >= 1  # At least the admin user

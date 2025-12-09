@@ -22,6 +22,7 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const adminCreated = ref(false)
 
   // Getters
   const isAuthenticated = computed(() => !!token.value && !!user.value)
@@ -31,6 +32,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(email: string, password: string): Promise<boolean> {
     loading.value = true
     error.value = null
+    adminCreated.value = false
 
     try {
       const response = await api.post('/api/auth/login', { email, password })
@@ -38,6 +40,11 @@ export const useAuthStore = defineStore('auth', () => {
 
       token.value = data.token
       localStorage.setItem('tinybase_token', data.token)
+      
+      // Check if admin was auto-created
+      if (data.admin_created) {
+        adminCreated.value = true
+      }
 
       // Fetch full user info
       await fetchUser()
@@ -72,12 +79,17 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('tinybase_token')
   }
 
+  function clearAdminCreated(): void {
+    adminCreated.value = false
+  }
+
   return {
     // State
     token,
     user,
     loading,
     error,
+    adminCreated,
     // Getters
     isAuthenticated,
     isAdmin,
@@ -85,6 +97,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     fetchUser,
     logout,
+    clearAdminCreated,
   }
 })
 

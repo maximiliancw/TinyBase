@@ -3,6 +3,7 @@
  * Schedules View
  * 
  * Manage function schedules (admin only).
+ * Uses semantic HTML elements following PicoCSS conventions.
  */
 import { onMounted, ref } from 'vue'
 import { useFunctionsStore } from '../stores/functions'
@@ -107,37 +108,36 @@ function formatSchedule(schedule: any): string {
 </script>
 
 <template>
-  <div class="fade-in">
-    <header class="page-header flex justify-between items-center">
-      <div>
+  <div data-animate="fade-in">
+    <header class="page-header">
+      <hgroup>
         <h1>Schedules</h1>
         <p>Manage function schedules</p>
-      </div>
-      <button class="btn btn-primary" @click="showCreateModal = true">
+      </hgroup>
+      <button @click="showCreateModal = true">
         + New Schedule
       </button>
     </header>
     
-    <div v-if="functionsStore.loading" class="card">
-      <div class="flex items-center gap-2">
-        <span class="spinner"></span>
-        Loading schedules...
-      </div>
-    </div>
+    <!-- Loading State -->
+    <article v-if="functionsStore.loading" aria-busy="true">
+      Loading schedules...
+    </article>
     
-    <div v-else-if="functionsStore.schedules.length === 0" class="card">
-      <div class="empty-state">
-        <div class="empty-state-icon">⏰</div>
+    <!-- Empty State -->
+    <article v-else-if="functionsStore.schedules.length === 0">
+      <div data-empty data-empty-icon="⏰">
         <p>No schedules yet</p>
-        <p class="text-muted">Create schedules to run functions automatically.</p>
-        <button class="btn btn-primary btn-sm mt-2" @click="showCreateModal = true">
+        <p><small class="text-muted">Create schedules to run functions automatically.</small></p>
+        <button class="small mt-2" @click="showCreateModal = true">
           Create Schedule
         </button>
       </div>
-    </div>
+    </article>
     
-    <div v-else class="card">
-      <table class="data-table">
+    <!-- Schedules Table -->
+    <article v-else>
+      <table>
         <thead>
           <tr>
             <th>Name</th>
@@ -151,160 +151,144 @@ function formatSchedule(schedule: any): string {
         <tbody>
           <tr v-for="schedule in functionsStore.schedules" :key="schedule.id">
             <td>{{ schedule.name }}</td>
-            <td style="font-family: monospace;">{{ schedule.function_name }}</td>
-            <td class="text-muted">{{ formatSchedule(schedule.schedule) }}</td>
+            <td><code>{{ schedule.function_name }}</code></td>
+            <td><small class="text-muted">{{ formatSchedule(schedule.schedule) }}</small></td>
             <td>
-              <span :class="['badge', schedule.is_active ? 'badge-success' : 'badge-neutral']">
+              <mark :data-status="schedule.is_active ? 'success' : 'neutral'">
                 {{ schedule.is_active ? 'Active' : 'Inactive' }}
-              </span>
+              </mark>
             </td>
-            <td class="text-muted">
+            <td><small class="text-muted">
               {{ schedule.next_run_at ? new Date(schedule.next_run_at).toLocaleString() : '-' }}
-            </td>
-            <td class="flex gap-1">
-              <button
-                class="btn btn-sm btn-secondary"
-                @click="handleToggleActive(schedule.id, schedule.is_active)"
-              >
-                {{ schedule.is_active ? 'Pause' : 'Resume' }}
-              </button>
-              <button class="btn btn-sm btn-danger" @click="handleDelete(schedule.id)">
-                Delete
-              </button>
+            </small></td>
+            <td>
+              <div role="group">
+                <button
+                  class="small secondary"
+                  @click="handleToggleActive(schedule.id, schedule.is_active)"
+                >
+                  {{ schedule.is_active ? 'Pause' : 'Resume' }}
+                </button>
+                <button class="small contrast" @click="handleDelete(schedule.id)">
+                  Delete
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
       </table>
-    </div>
+    </article>
     
     <!-- Create Schedule Modal -->
-    <dialog v-if="showCreateModal" open class="modal">
-      <article class="card" style="max-width: 500px; margin: 2rem auto;">
-        <header class="card-header">
-          <h3 class="card-title">Create Schedule</h3>
-          <button class="btn btn-sm btn-secondary" @click="showCreateModal = false">✕</button>
+    <dialog :open="showCreateModal">
+      <article>
+        <header>
+          <button aria-label="Close" rel="prev" @click="showCreateModal = false"></button>
+          <h3>Create Schedule</h3>
         </header>
         
         <form @submit.prevent="handleCreate">
-          <div class="form-group">
-            <label class="form-label" for="name">Name</label>
+          <label for="name">
+            Name
             <input
               id="name"
               v-model="newSchedule.name"
               type="text"
-              class="form-input"
               required
             />
-          </div>
+          </label>
           
-          <div class="form-group">
-            <label class="form-label" for="function">Function</label>
-            <select
-              id="function"
-              v-model="newSchedule.function_name"
-              class="form-input"
-              required
-            >
+          <label for="function">
+            Function
+            <select id="function" v-model="newSchedule.function_name" required>
               <option value="">Select a function</option>
               <option v-for="fn in functionsStore.functions" :key="fn.name" :value="fn.name">
                 {{ fn.name }}
               </option>
             </select>
-          </div>
+          </label>
           
-          <div class="form-group">
-            <label class="form-label">Schedule Type</label>
-            <div class="flex gap-2">
-              <label class="flex items-center gap-1">
-                <input type="radio" v-model="newSchedule.method" value="interval" />
-                Interval
-              </label>
-              <label class="flex items-center gap-1">
-                <input type="radio" v-model="newSchedule.method" value="cron" />
-                Cron
-              </label>
-              <label class="flex items-center gap-1">
-                <input type="radio" v-model="newSchedule.method" value="once" />
-                Once
-              </label>
-            </div>
-          </div>
+          <fieldset>
+            <legend>Schedule Type</legend>
+            <label>
+              <input type="radio" v-model="newSchedule.method" value="interval" />
+              Interval
+            </label>
+            <label>
+              <input type="radio" v-model="newSchedule.method" value="cron" />
+              Cron
+            </label>
+            <label>
+              <input type="radio" v-model="newSchedule.method" value="once" />
+              Once
+            </label>
+          </fieldset>
           
           <!-- Interval Options -->
-          <div v-if="newSchedule.method === 'interval'" class="form-group">
-            <label class="form-label">Interval</label>
-            <div class="flex gap-2">
+          <div v-if="newSchedule.method === 'interval'" class="grid">
+            <label>
+              Value
               <input
                 v-model.number="newSchedule.value"
                 type="number"
-                class="form-input"
                 min="1"
-                style="width: 100px;"
               />
-              <select v-model="newSchedule.unit" class="form-input">
+            </label>
+            <label>
+              Unit
+              <select v-model="newSchedule.unit">
                 <option value="seconds">Seconds</option>
                 <option value="minutes">Minutes</option>
                 <option value="hours">Hours</option>
                 <option value="days">Days</option>
               </select>
-            </div>
+            </label>
           </div>
           
           <!-- Cron Options -->
-          <div v-if="newSchedule.method === 'cron'" class="form-group">
-            <label class="form-label" for="cron">Cron Expression</label>
+          <label v-if="newSchedule.method === 'cron'">
+            Cron Expression
             <input
-              id="cron"
               v-model="newSchedule.cron"
               type="text"
-              class="form-input"
               placeholder="0 * * * *"
             />
-            <p class="text-muted" style="font-size: 0.75rem; margin-top: 0.25rem;">
-              Format: minute hour day_of_month month day_of_week
-            </p>
-          </div>
+            <small>Format: minute hour day_of_month month day_of_week</small>
+          </label>
           
           <!-- Once Options -->
-          <div v-if="newSchedule.method === 'once'" class="form-group">
-            <label class="form-label">Date and Time</label>
-            <div class="flex gap-2">
-              <input
-                v-model="newSchedule.date"
-                type="date"
-                class="form-input"
-              />
-              <input
-                v-model="newSchedule.time"
-                type="time"
-                class="form-input"
-              />
-            </div>
+          <div v-if="newSchedule.method === 'once'" class="grid">
+            <label>
+              Date
+              <input v-model="newSchedule.date" type="date" />
+            </label>
+            <label>
+              Time
+              <input v-model="newSchedule.time" type="time" />
+            </label>
           </div>
           
-          <div class="form-group">
-            <label class="form-label" for="timezone">Timezone</label>
+          <label>
+            Timezone
             <input
-              id="timezone"
               v-model="newSchedule.timezone"
               type="text"
-              class="form-input"
               placeholder="UTC"
             />
-          </div>
+          </label>
           
-          <div v-if="functionsStore.error" class="text-error mb-2">
+          <small v-if="functionsStore.error" class="text-error">
             {{ functionsStore.error }}
-          </div>
+          </small>
           
-          <div class="flex gap-2 justify-between">
-            <button type="button" class="btn btn-secondary" @click="showCreateModal = false">
+          <footer>
+            <button type="button" class="secondary" @click="showCreateModal = false">
               Cancel
             </button>
-            <button type="submit" class="btn btn-primary" :disabled="functionsStore.loading">
-              Create Schedule
+            <button type="submit" :aria-busy="functionsStore.loading" :disabled="functionsStore.loading">
+              {{ functionsStore.loading ? '' : 'Create Schedule' }}
             </button>
-          </div>
+          </footer>
         </form>
       </article>
     </dialog>
@@ -312,29 +296,30 @@ function formatSchedule(schedule: any): string {
 </template>
 
 <style scoped>
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+/* Page header layout */
+.page-header {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  border: none;
-  padding: 0;
-  margin: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
+  justify-content: space-between;
+  align-items: flex-start;
 }
 
-.modal article {
-  background: var(--tb-bg-card);
-  width: 100%;
+.page-header hgroup {
+  margin: 0;
+}
+
+.page-header hgroup h1 {
+  margin-bottom: var(--tb-spacing-xs);
+}
+
+.page-header hgroup p {
+  margin: 0;
+  color: var(--pico-muted-color);
+}
+
+/* Dialog footer buttons */
+dialog article footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--tb-spacing-sm);
 }
 </style>
-

@@ -9,13 +9,84 @@ from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ValidationError
+from sqlalchemy import func
 from sqlmodel import Session, select
 
 from tinybase.collections.schemas import (
     build_pydantic_model_from_schema,
     get_registry,
 )
-from tinybase.db.models import Collection, Record, utcnow
+from tinybase.db.models import Collection, Record
+from tinybase.utils import utcnow, AccessRule
+
+
+def check_access(
+    collection: Collection,
+    operation: str,
+    user_id: UUID | None = None,
+    is_admin: bool = False,
+    record_owner_id: UUID | None = None,
+) -> bool:
+    """
+    Check if an operation is allowed on a collection.
+    
+    Args:
+        collection: The collection to check
+        operation: The operation (list, read, create, update, delete)
+        user_id: The current user's ID (None for anonymous)
+        is_admin: Whether the user is an admin
+        record_owner_id: For record operations, the record's owner ID
+    
+    Returns:
+        True if access is allowed, False otherwise.
+    """
+    # Admins always have access
+    if is_admin:
+        return True
+    
+    # Get access rules from collection options
+    options = collection.options or {}
+    access_rules = options.get("access", {})
+    
+    # Default access rules:
+    # - list/read: public (anyone can read)
+    # - create: auth (authenticated users)
+    # - update/delete: owner (only record owner)
+    default_rules = {
+        "list": AccessRule.PUBLIC,
+        "read": AccessRule.PUBLIC,
+        "create": AccessRule.AUTH,
+        "update": AccessRule.OWNER,
+        "delete": AccessRule.OWNER,
+    }
+    
+    rule_str = access_rules.get(operation, default_rules.get(operation, AccessRule.AUTH))
+    
+    # Convert string to enum if needed
+    if isinstance(rule_str, str):
+        try:
+            rule = AccessRule(rule_str)
+        except ValueError:
+            rule = AccessRule.AUTH
+    else:
+        rule = rule_str
+    
+    # Check rule
+    if rule == AccessRule.PUBLIC:
+        return True
+    elif rule == AccessRule.AUTH:
+        return user_id is not None
+    elif rule == AccessRule.OWNER:
+        if user_id is None:
+            return False
+        # For list/create, owner check doesn't make sense, treat as auth
+        if record_owner_id is None:
+            return True
+        return record_owner_id == user_id
+    elif rule == AccessRule.ADMIN:
+        return is_admin
+    
+    return False
 
 
 class CollectionService:
@@ -216,9 +287,11 @@ class CollectionService:
         limit: int = 100,
         offset: int = 0,
         filters: dict[str, Any] | None = None,
+        sort_by: str | None = None,
+        sort_order: str = "desc",
     ) -> tuple[list[Record], int]:
         """
-        List records in a collection with optional filtering.
+        List records in a collection with optional filtering and sorting.
         
         Args:
             collection: The collection to query
@@ -226,6 +299,8 @@ class CollectionService:
             limit: Maximum records to return
             offset: Number of records to skip
             filters: Simple field filters (field_name: value)
+            sort_by: Field to sort by (created_at, updated_at, or None)
+            sort_order: Sort order (asc or desc)
         
         Returns:
             Tuple of (records list, total count).
@@ -236,11 +311,22 @@ class CollectionService:
         if owner_id is not None:
             query = query.where(Record.owner_id == owner_id)
         
-        # Get total count
-        count_query = select(Record).where(Record.collection_id == collection.id)
+        # Get total count efficiently using SQL COUNT
+        count_stmt = select(func.count(Record.id)).where(Record.collection_id == collection.id)
         if owner_id is not None:
-            count_query = count_query.where(Record.owner_id == owner_id)
-        total = len(list(self.session.exec(count_query).all()))
+            count_stmt = count_stmt.where(Record.owner_id == owner_id)
+        total = self.session.exec(count_stmt).one()
+        
+        # Apply sorting
+        if sort_by == "created_at":
+            order_col = Record.created_at.desc() if sort_order == "desc" else Record.created_at.asc()
+            query = query.order_by(order_col)
+        elif sort_by == "updated_at":
+            order_col = Record.updated_at.desc() if sort_order == "desc" else Record.updated_at.asc()
+            query = query.order_by(order_col)
+        else:
+            # Default to created_at desc
+            query = query.order_by(Record.created_at.desc())
         
         # Apply pagination
         query = query.offset(offset).limit(limit)

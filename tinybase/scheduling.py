@@ -9,20 +9,38 @@ Provides:
 
 import datetime as dt
 import zoneinfo
-from typing import Annotated, Literal, Union
+from typing import Annotated, Union
 
 from croniter import croniter
 from pydantic import BaseModel, ConfigDict, Field
 
-
-def utcnow() -> dt.datetime:
-    """Return current UTC datetime (timezone-aware)."""
-    return dt.datetime.now(dt.timezone.utc)
+from tinybase.utils import ScheduleMethod, IntervalUnit
 
 
 # =============================================================================
 # Schedule Configuration Models
 # =============================================================================
+
+
+def get_server_timezone() -> str:
+    """
+    Get the server's configured timezone from InstanceSettings.
+    
+    Falls back to UTC if not configured or on error.
+    """
+    try:
+        from tinybase.db.core import get_engine
+        from tinybase.db.models import InstanceSettings
+        from sqlmodel import Session
+        
+        engine = get_engine()
+        with Session(engine) as session:
+            settings = session.get(InstanceSettings, 1)
+            if settings and settings.server_timezone:
+                return settings.server_timezone
+    except Exception:
+        pass
+    return "UTC"
 
 
 class BaseScheduleConfig(BaseModel):
@@ -31,16 +49,19 @@ class BaseScheduleConfig(BaseModel):
     
     All schedule types share timezone support and a method for
     calculating the next run time.
+    
+    If timezone is not specified, it defaults to the server's configured timezone.
     """
     
     model_config = ConfigDict(extra="forbid")
     
-    method: Literal["once", "interval", "cron"]
-    timezone: str = Field(default="UTC", description="Timezone for schedule calculations")
+    method: ScheduleMethod
+    timezone: str | None = Field(default=None, description="Timezone for schedule calculations (defaults to server timezone)")
     
     def tzinfo(self) -> zoneinfo.ZoneInfo:
-        """Get the timezone info object."""
-        return zoneinfo.ZoneInfo(self.timezone)
+        """Get the timezone info object, falling back to server timezone."""
+        tz = self.timezone or get_server_timezone()
+        return zoneinfo.ZoneInfo(tz)
     
     def next_run_after(self, from_time: dt.datetime) -> dt.datetime | None:
         """
@@ -63,7 +84,7 @@ class OnceScheduleConfig(BaseScheduleConfig):
     After execution, the schedule becomes inactive.
     """
     
-    method: Literal["once"] = "once"
+    method: ScheduleMethod = ScheduleMethod.ONCE
     run_date: dt.date = Field(alias="date", description="Date to run (YYYY-MM-DD)")
     run_time: dt.time = Field(alias="time", description="Time to run (HH:MM:SS)")
     
@@ -95,10 +116,8 @@ class IntervalScheduleConfig(BaseScheduleConfig):
     The function will run every N seconds/minutes/hours/days.
     """
     
-    method: Literal["interval"] = "interval"
-    unit: Literal["seconds", "minutes", "hours", "days"] = Field(
-        description="Time unit for interval"
-    )
+    method: ScheduleMethod = ScheduleMethod.INTERVAL
+    unit: IntervalUnit = Field(description="Time unit for interval")
     value: int = Field(gt=0, description="Interval value (must be positive)")
     
     def next_run_after(self, from_time: dt.datetime) -> dt.datetime | None:
@@ -107,10 +126,10 @@ class IntervalScheduleConfig(BaseScheduleConfig):
         base = from_time.astimezone(tz)
         
         delta_map = {
-            "seconds": dt.timedelta(seconds=self.value),
-            "minutes": dt.timedelta(minutes=self.value),
-            "hours": dt.timedelta(hours=self.value),
-            "days": dt.timedelta(days=self.value),
+            IntervalUnit.SECONDS: dt.timedelta(seconds=self.value),
+            IntervalUnit.MINUTES: dt.timedelta(minutes=self.value),
+            IntervalUnit.HOURS: dt.timedelta(hours=self.value),
+            IntervalUnit.DAYS: dt.timedelta(days=self.value),
         }
         
         return base + delta_map[self.unit]
@@ -129,7 +148,7 @@ class CronScheduleConfig(BaseScheduleConfig):
         "0 0 1 * *" - First day of each month at midnight
     """
     
-    method: Literal["cron"] = "cron"
+    method: ScheduleMethod = ScheduleMethod.CRON
     cron: str = Field(description="Cron expression (5 fields)")
     description: str | None = Field(
         default=None,
@@ -177,11 +196,12 @@ def parse_schedule_config(schedule_dict: dict) -> ScheduleConfig:
     """
     method = schedule_dict.get("method")
     
-    if method == "once":
+    # Support both string and enum values
+    if method in (ScheduleMethod.ONCE, "once"):
         return OnceScheduleConfig.model_validate(schedule_dict)
-    elif method == "interval":
+    elif method in (ScheduleMethod.INTERVAL, "interval"):
         return IntervalScheduleConfig.model_validate(schedule_dict)
-    elif method == "cron":
+    elif method in (ScheduleMethod.CRON, "cron"):
         return CronScheduleConfig.model_validate(schedule_dict)
     else:
         raise ValueError(f"Unknown schedule method: {method}")

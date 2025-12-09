@@ -3,6 +3,7 @@
  * Collections View
  * 
  * List and manage data collections.
+ * Uses semantic HTML elements following PicoCSS conventions.
  */
 import { onMounted, ref } from 'vue'
 import { useCollectionsStore } from '../stores/collections'
@@ -49,37 +50,36 @@ async function handleDelete(name: string) {
 </script>
 
 <template>
-  <div class="fade-in">
-    <header class="page-header flex justify-between items-center">
-      <div>
+  <div data-animate="fade-in">
+    <header class="page-header">
+      <hgroup>
         <h1>Collections</h1>
         <p>Manage your data collections</p>
-      </div>
-      <button v-if="authStore.isAdmin" class="btn btn-primary" @click="showCreateModal = true">
+      </hgroup>
+      <button v-if="authStore.isAdmin" @click="showCreateModal = true">
         + New Collection
       </button>
     </header>
     
-    <div v-if="collectionsStore.loading" class="card">
-      <div class="flex items-center gap-2">
-        <span class="spinner"></span>
-        Loading collections...
-      </div>
-    </div>
+    <!-- Loading State -->
+    <article v-if="collectionsStore.loading" aria-busy="true">
+      Loading collections...
+    </article>
     
-    <div v-else-if="collectionsStore.collections.length === 0" class="card">
-      <div class="empty-state">
-        <div class="empty-state-icon">📁</div>
+    <!-- Empty State -->
+    <article v-else-if="collectionsStore.collections.length === 0">
+      <div data-empty data-empty-icon="📁">
         <p>No collections yet</p>
-        <p class="text-muted">Create your first collection to start storing data.</p>
-        <button v-if="authStore.isAdmin" class="btn btn-primary mt-2" @click="showCreateModal = true">
+        <p><small class="text-muted">Create your first collection to start storing data.</small></p>
+        <button v-if="authStore.isAdmin" class="mt-2" @click="showCreateModal = true">
           Create Collection
         </button>
       </div>
-    </div>
+    </article>
     
-    <div v-else class="card">
-      <table class="data-table">
+    <!-- Collections Table -->
+    <article v-else>
+      <table>
         <thead>
           <tr>
             <th>Name</th>
@@ -92,81 +92,78 @@ async function handleDelete(name: string) {
         <tbody>
           <tr v-for="collection in collectionsStore.collections" :key="collection.id">
             <td>
-              <router-link :to="`/collections/${collection.name}`" class="text-primary">
+              <router-link :to="`/collections/${collection.name}`">
                 {{ collection.name }}
               </router-link>
             </td>
             <td>{{ collection.label }}</td>
             <td>{{ collection.schema?.fields?.length || 0 }} fields</td>
-            <td class="text-muted">{{ new Date(collection.created_at).toLocaleDateString() }}</td>
+            <td><small class="text-muted">{{ new Date(collection.created_at).toLocaleDateString() }}</small></td>
             <td v-if="authStore.isAdmin">
-              <button class="btn btn-sm btn-danger" @click="handleDelete(collection.name)">
+              <button class="small contrast" @click="handleDelete(collection.name)">
                 Delete
               </button>
             </td>
           </tr>
         </tbody>
       </table>
-    </div>
+    </article>
     
-    <!-- Create Collection Modal -->
-    <dialog v-if="showCreateModal" open class="modal">
-      <article class="card" style="max-width: 600px; margin: 2rem auto;">
-        <header class="card-header">
-          <h3 class="card-title">Create Collection</h3>
-          <button class="btn btn-sm btn-secondary" @click="showCreateModal = false">✕</button>
+    <!-- Create Collection Modal - using Pico's dialog element -->
+    <dialog :open="showCreateModal">
+      <article>
+        <header>
+          <button aria-label="Close" rel="prev" @click="showCreateModal = false"></button>
+          <h3>Create Collection</h3>
         </header>
         
         <form @submit.prevent="handleCreate">
-          <div class="form-group">
-            <label class="form-label" for="name">Name (snake_case)</label>
+          <label for="name">
+            Name (snake_case)
             <input
               id="name"
               v-model="newCollection.name"
               type="text"
-              class="form-input"
               pattern="[a-z][a-z0-9_]*"
               placeholder="my_collection"
               required
             />
-          </div>
+          </label>
           
-          <div class="form-group">
-            <label class="form-label" for="label">Label</label>
+          <label for="label">
+            Label
             <input
               id="label"
               v-model="newCollection.label"
               type="text"
-              class="form-input"
               placeholder="My Collection"
               required
             />
-          </div>
+          </label>
           
-          <div class="form-group">
-            <label class="form-label" for="schema">Schema (JSON)</label>
+          <label for="schema">
+            Schema (JSON)
             <textarea
               id="schema"
               v-model="newCollection.schemaText"
-              class="form-input"
               rows="10"
               style="font-family: monospace; font-size: 0.875rem;"
               required
             ></textarea>
-          </div>
+          </label>
           
-          <div v-if="collectionsStore.error" class="text-error mb-2">
+          <small v-if="collectionsStore.error" class="text-error">
             {{ collectionsStore.error }}
-          </div>
+          </small>
           
-          <div class="flex gap-2 justify-between">
-            <button type="button" class="btn btn-secondary" @click="showCreateModal = false">
+          <footer>
+            <button type="button" class="secondary" @click="showCreateModal = false">
               Cancel
             </button>
-            <button type="submit" class="btn btn-primary" :disabled="collectionsStore.loading">
-              Create Collection
+            <button type="submit" :aria-busy="collectionsStore.loading" :disabled="collectionsStore.loading">
+              {{ collectionsStore.loading ? '' : 'Create Collection' }}
             </button>
-          </div>
+          </footer>
         </form>
       </article>
     </dialog>
@@ -174,33 +171,30 @@ async function handleDelete(name: string) {
 </template>
 
 <style scoped>
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+/* Page header layout */
+.page-header {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  border: none;
-  padding: 0;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.page-header hgroup {
   margin: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
 }
 
-.modal article {
-  background: var(--tb-bg-card);
-  width: 100%;
+.page-header hgroup h1 {
+  margin-bottom: var(--tb-spacing-xs);
 }
 
-.text-primary {
-  color: var(--tb-primary);
+.page-header hgroup p {
+  margin: 0;
+  color: var(--pico-muted-color);
+}
+
+/* Dialog footer buttons */
+dialog article footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--tb-spacing-sm);
 }
 </style>
-

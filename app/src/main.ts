@@ -14,8 +14,8 @@ import router from './router'
 // Import PicoCSS
 import '@picocss/pico/css/pico.min.css'
 
-// Import custom styles
-import './style.css'
+// Import custom styles (single entry point)
+import './static/index.css'
 
 // Create Vue app
 const app = createApp(App)

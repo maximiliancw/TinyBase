@@ -3,6 +3,7 @@
  * Functions View
  * 
  * View and invoke registered functions.
+ * Uses semantic HTML elements following PicoCSS conventions.
  */
 import { onMounted, ref } from 'vue'
 import { useFunctionsStore, type FunctionInfo } from '../stores/functions'
@@ -48,12 +49,12 @@ async function handleCall() {
   }
 }
 
-function getAuthBadgeClass(auth: string) {
+function getAuthStatus(auth: string): 'success' | 'info' | 'warning' | 'neutral' {
   switch (auth) {
-    case 'public': return 'badge-success'
-    case 'auth': return 'badge-info'
-    case 'admin': return 'badge-warning'
-    default: return 'badge-neutral'
+    case 'public': return 'success'
+    case 'auth': return 'info'
+    case 'admin': return 'warning'
+    default: return 'neutral'
   }
 }
 
@@ -63,29 +64,28 @@ const displayFunctions = () => {
 </script>
 
 <template>
-  <div class="fade-in">
+  <div data-animate="fade-in">
     <header class="page-header">
       <h1>Functions</h1>
       <p>Registered server-side functions</p>
     </header>
     
-    <div v-if="functionsStore.loading" class="card">
-      <div class="flex items-center gap-2">
-        <span class="spinner"></span>
-        Loading functions...
-      </div>
-    </div>
+    <!-- Loading State -->
+    <article v-if="functionsStore.loading" aria-busy="true">
+      Loading functions...
+    </article>
     
-    <div v-else-if="displayFunctions().length === 0" class="card">
-      <div class="empty-state">
-        <div class="empty-state-icon">⚡</div>
+    <!-- Empty State -->
+    <article v-else-if="displayFunctions().length === 0">
+      <div data-empty data-empty-icon="⚡">
         <p>No functions registered</p>
-        <p class="text-muted">Define functions in functions.py using the @register decorator.</p>
+        <p><small class="text-muted">Define functions in functions.py using the @register decorator.</small></p>
       </div>
-    </div>
+    </article>
     
-    <div v-else class="card">
-      <table class="data-table">
+    <!-- Functions Table -->
+    <article v-else>
+      <table>
         <thead>
           <tr>
             <th>Name</th>
@@ -98,125 +98,94 @@ const displayFunctions = () => {
         </thead>
         <tbody>
           <tr v-for="fn in displayFunctions()" :key="fn.name">
-            <td style="font-family: monospace;">{{ fn.name }}</td>
-            <td class="text-muted">{{ fn.description || '-' }}</td>
+            <td><code>{{ fn.name }}</code></td>
+            <td><small class="text-muted">{{ fn.description || '-' }}</small></td>
             <td>
-              <span :class="['badge', getAuthBadgeClass(fn.auth)]">
+              <mark :data-status="getAuthStatus(fn.auth)">
                 {{ fn.auth }}
-              </span>
+              </mark>
             </td>
             <td>
-              <span
+              <mark
                 v-for="tag in fn.tags"
                 :key="tag"
-                class="badge badge-neutral"
+                data-status="neutral"
                 style="margin-right: 0.25rem;"
               >
                 {{ tag }}
-              </span>
-              <span v-if="fn.tags.length === 0" class="text-muted">-</span>
+              </mark>
+              <small v-if="fn.tags.length === 0" class="text-muted">-</small>
             </td>
-            <td v-if="authStore.isAdmin" class="text-muted" style="font-size: 0.75rem;">
-              {{ fn.module }}
+            <td v-if="authStore.isAdmin">
+              <small class="text-muted">{{ fn.module }}</small>
             </td>
             <td>
-              <button class="btn btn-sm btn-primary" @click="openCallModal(fn)">
+              <button class="small" @click="openCallModal(fn)">
                 Call
               </button>
             </td>
           </tr>
         </tbody>
       </table>
-    </div>
+    </article>
     
     <!-- Call Function Modal -->
-    <dialog v-if="showCallModal" open class="modal">
-      <article class="card" style="max-width: 600px; margin: 2rem auto;">
-        <header class="card-header">
-          <h3 class="card-title">Call: {{ selectedFunction?.name }}</h3>
-          <button class="btn btn-sm btn-secondary" @click="showCallModal = false">✕</button>
+    <dialog :open="showCallModal">
+      <article>
+        <header>
+          <button aria-label="Close" rel="prev" @click="showCallModal = false"></button>
+          <h3>Call: <code>{{ selectedFunction?.name }}</code></h3>
         </header>
         
-        <div v-if="selectedFunction?.description" class="text-muted mb-2">
+        <p v-if="selectedFunction?.description" class="text-muted">
           {{ selectedFunction.description }}
-        </div>
+        </p>
         
         <form @submit.prevent="handleCall">
-          <div class="form-group">
-            <label class="form-label" for="payload">Payload (JSON)</label>
+          <label for="payload">
+            Payload (JSON)
             <textarea
               id="payload"
               v-model="callPayload"
-              class="form-input"
               rows="6"
               style="font-family: monospace; font-size: 0.875rem;"
             ></textarea>
-          </div>
+          </label>
           
-          <button type="submit" class="btn btn-primary" :disabled="functionsStore.loading">
-            <span v-if="functionsStore.loading" class="spinner"></span>
-            <span v-else>Execute</span>
+          <button type="submit" :aria-busy="functionsStore.loading" :disabled="functionsStore.loading">
+            {{ functionsStore.loading ? '' : 'Execute' }}
           </button>
         </form>
         
         <!-- Result Display -->
         <div v-if="callResult" class="mt-3">
           <h4>Result</h4>
-          <div
-            :class="['badge', callResult.status === 'succeeded' ? 'badge-success' : 'badge-error']"
-            style="margin-bottom: 0.5rem;"
-          >
-            {{ callResult.status }}
-          </div>
-          <div v-if="callResult.duration_ms" class="text-muted" style="font-size: 0.75rem;">
-            Duration: {{ callResult.duration_ms }}ms
-          </div>
-          <pre v-if="callResult.result" style="background: var(--tb-bg-dark); padding: 1rem; border-radius: 0.5rem; overflow: auto; margin-top: 0.5rem;">{{ JSON.stringify(callResult.result, null, 2) }}</pre>
-          <div v-if="callResult.error_message" class="text-error mt-2">
+          <p>
+            <mark :data-status="callResult.status === 'succeeded' ? 'success' : 'error'">
+              {{ callResult.status }}
+            </mark>
+            <small v-if="callResult.duration_ms" class="text-muted" style="margin-left: 0.5rem;">
+              Duration: {{ callResult.duration_ms }}ms
+            </small>
+          </p>
+          <pre v-if="callResult.result">{{ JSON.stringify(callResult.result, null, 2) }}</pre>
+          <p v-if="callResult.error_message" class="text-error">
             <strong>{{ callResult.error_type }}:</strong> {{ callResult.error_message }}
-          </div>
+          </p>
         </div>
         
-        <div v-if="callError" class="text-error mt-2">
+        <small v-if="callError" class="text-error">
           {{ callError }}
-        </div>
+        </small>
       </article>
     </dialog>
   </div>
 </template>
 
 <style scoped>
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  border: none;
-  padding: 0;
-  margin: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
-}
-
-.modal article {
-  background: var(--tb-bg-card);
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
 pre {
   font-size: 0.875rem;
   white-space: pre-wrap;
   word-break: break-word;
 }
 </style>
-

@@ -8,7 +8,9 @@ Provides endpoints for:
 """
 
 from pydantic import BaseModel, EmailStr, Field
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlmodel import select
 
 from tinybase.auth import (
@@ -18,9 +20,15 @@ from tinybase.auth import (
     hash_password,
     verify_password,
 )
-from tinybase.db.models import User
+from tinybase.db.models import InstanceSettings, User
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+# Rate limiter for auth routes
+# Uses environment variable TINYBASE_RATE_LIMIT_ENABLED to disable in tests
+import os
+_rate_limit_enabled = os.environ.get("TINYBASE_RATE_LIMIT_ENABLED", "true").lower() != "false"
+limiter = Limiter(key_func=get_remote_address, enabled=_rate_limit_enabled)
 
 
 # =============================================================================
@@ -58,6 +66,7 @@ class LoginResponse(BaseModel):
     user_id: str = Field(description="Authenticated user ID")
     email: str = Field(description="Authenticated user email")
     is_admin: bool = Field(description="Whether user has admin privileges")
+    admin_created: bool = Field(default=False, description="Whether an admin user was auto-created")
 
 
 class UserInfo(BaseModel):
@@ -69,9 +78,34 @@ class UserInfo(BaseModel):
     created_at: str = Field(description="User creation timestamp")
 
 
+class SetupStatusResponse(BaseModel):
+    """Setup status response."""
+    
+    needs_setup: bool = Field(description="Whether initial setup is needed (no users exist)")
+
+
 # =============================================================================
 # Routes
 # =============================================================================
+
+
+@router.get(
+    "/setup-status",
+    response_model=SetupStatusResponse,
+    summary="Check setup status",
+    description="Check if initial setup is needed (no users exist yet).",
+)
+def get_setup_status(session: DbSession) -> SetupStatusResponse:
+    """
+    Check if the system needs initial setup.
+    
+    Returns needs_setup=True if no users exist in the database,
+    indicating that the first login will create an admin user.
+    """
+    from sqlalchemy import func
+    
+    user_count = session.exec(select(func.count(User.id))).one()
+    return SetupStatusResponse(needs_setup=user_count == 0)
 
 
 @router.post(
@@ -81,16 +115,27 @@ class UserInfo(BaseModel):
     summary="Register a new user",
     description="Create a new user account with email and password.",
 )
-def register(request: RegisterRequest, session: DbSession) -> RegisterResponse:
+@limiter.limit("5/minute")
+def register(request: Request, body: RegisterRequest, session: DbSession) -> RegisterResponse:
     """
     Register a new user account.
     
     Creates a new user with the provided email and password. The password
     is hashed before storage using bcrypt.
+    
+    Registration may be disabled via instance settings.
     """
+    # Check if public registration is allowed
+    instance_settings = session.get(InstanceSettings, 1)
+    if instance_settings and not instance_settings.allow_public_registration:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Public registration is disabled",
+        )
+    
     # Check if email already exists
     existing = session.exec(
-        select(User).where(User.email == request.email)
+        select(User).where(User.email == body.email)
     ).first()
     
     if existing:
@@ -101,8 +146,8 @@ def register(request: RegisterRequest, session: DbSession) -> RegisterResponse:
     
     # Create new user
     user = User(
-        email=request.email,
-        password_hash=hash_password(request.password),
+        email=body.email,
+        password_hash=hash_password(body.password),
     )
     session.add(user)
     session.commit()
@@ -120,30 +165,53 @@ def register(request: RegisterRequest, session: DbSession) -> RegisterResponse:
     summary="Login and get access token",
     description="Authenticate with email and password to receive a bearer token.",
 )
-def login(request: LoginRequest, session: DbSession) -> LoginResponse:
+@limiter.limit("10/minute")
+def login(request: Request, body: LoginRequest, session: DbSession) -> LoginResponse:
     """
     Authenticate user and issue access token.
     
     Verifies the provided email and password, then creates and returns
     a new bearer token for API authentication.
+    
+    If no users exist in the system, automatically creates an admin user
+    with the provided credentials.
     """
-    # Find user by email
-    user = session.exec(
-        select(User).where(User.email == request.email)
-    ).first()
+    from sqlalchemy import func
     
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
-        )
+    admin_created = False
     
-    # Verify password
-    if not verify_password(request.password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
+    # Check if any users exist
+    user_count = session.exec(select(func.count(User.id))).one()
+    
+    if user_count == 0:
+        # No users exist - create admin user with provided credentials
+        user = User(
+            email=body.email,
+            password_hash=hash_password(body.password),
+            is_admin=True,
         )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        admin_created = True
+    else:
+        # Find user by email
+        user = session.exec(
+            select(User).where(User.email == body.email)
+        ).first()
+        
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password",
+            )
+        
+        # Verify password
+        if not verify_password(body.password, user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password",
+            )
     
     # Create and return token
     auth_token = create_auth_token(session, user)
@@ -153,6 +221,7 @@ def login(request: LoginRequest, session: DbSession) -> LoginResponse:
         user_id=str(user.id),
         email=user.email,
         is_admin=user.is_admin,
+        admin_created=admin_created,
     )
 
 

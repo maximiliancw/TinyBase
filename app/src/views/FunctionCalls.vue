@@ -3,6 +3,7 @@
  * Function Calls View
  * 
  * View function call history (admin only).
+ * Uses semantic HTML elements following PicoCSS conventions.
  */
 import { onMounted, ref } from 'vue'
 import { useFunctionsStore } from '../stores/functions'
@@ -37,12 +38,12 @@ async function applyFilters() {
   await loadCalls()
 }
 
-function getStatusBadgeClass(status: string) {
+function getStatusType(status: string): 'success' | 'error' | 'warning' | 'neutral' {
   switch (status) {
-    case 'succeeded': return 'badge-success'
-    case 'failed': return 'badge-error'
-    case 'running': return 'badge-warning'
-    default: return 'badge-neutral'
+    case 'succeeded': return 'success'
+    case 'failed': return 'error'
+    case 'running': return 'warning'
+    default: return 'neutral'
   }
 }
 
@@ -54,58 +55,65 @@ function formatDuration(ms: number | null): string {
 </script>
 
 <template>
-  <div class="fade-in">
+  <div data-animate="fade-in">
     <header class="page-header">
       <h1>Function Calls</h1>
       <p>Execution history for all functions</p>
     </header>
     
-    <!-- Filters -->
-    <div class="card mb-3">
-      <div class="flex gap-2 items-center" style="flex-wrap: wrap;">
-        <select v-model="filters.function_name" class="form-input" style="width: auto;">
-          <option value="">All Functions</option>
-          <option v-for="fn in functionsStore.functions" :key="fn.name" :value="fn.name">
-            {{ fn.name }}
-          </option>
-        </select>
+    <!-- Filters - using Pico's grid for layout -->
+    <article class="filters">
+      <div class="grid">
+        <label>
+          Function
+          <select v-model="filters.function_name">
+            <option value="">All Functions</option>
+            <option v-for="fn in functionsStore.functions" :key="fn.name" :value="fn.name">
+              {{ fn.name }}
+            </option>
+          </select>
+        </label>
         
-        <select v-model="filters.status" class="form-input" style="width: auto;">
-          <option value="">All Statuses</option>
-          <option value="succeeded">Succeeded</option>
-          <option value="failed">Failed</option>
-          <option value="running">Running</option>
-        </select>
+        <label>
+          Status
+          <select v-model="filters.status">
+            <option value="">All Statuses</option>
+            <option value="succeeded">Succeeded</option>
+            <option value="failed">Failed</option>
+            <option value="running">Running</option>
+          </select>
+        </label>
         
-        <select v-model="filters.trigger_type" class="form-input" style="width: auto;">
-          <option value="">All Triggers</option>
-          <option value="manual">Manual</option>
-          <option value="schedule">Schedule</option>
-        </select>
-        
-        <button class="btn btn-secondary" @click="applyFilters">
-          Apply Filters
-        </button>
+        <label>
+          Trigger
+          <select v-model="filters.trigger_type">
+            <option value="">All Triggers</option>
+            <option value="manual">Manual</option>
+            <option value="schedule">Schedule</option>
+          </select>
+        </label>
       </div>
-    </div>
+      <button class="secondary" @click="applyFilters">
+        Apply Filters
+      </button>
+    </article>
     
-    <div v-if="functionsStore.loading" class="card">
-      <div class="flex items-center gap-2">
-        <span class="spinner"></span>
-        Loading function calls...
-      </div>
-    </div>
+    <!-- Loading State -->
+    <article v-if="functionsStore.loading" aria-busy="true">
+      Loading function calls...
+    </article>
     
-    <div v-else-if="functionsStore.functionCalls.length === 0" class="card">
-      <div class="empty-state">
-        <div class="empty-state-icon">📜</div>
+    <!-- Empty State -->
+    <article v-else-if="functionsStore.functionCalls.length === 0">
+      <div data-empty data-empty-icon="📜">
         <p>No function calls yet</p>
-        <p class="text-muted">Function calls will appear here when functions are invoked.</p>
+        <p><small class="text-muted">Function calls will appear here when functions are invoked.</small></p>
       </div>
-    </div>
+    </article>
     
-    <div v-else class="card">
-      <table class="data-table">
+    <!-- Function Calls Table -->
+    <article v-else>
+      <table>
         <thead>
           <tr>
             <th>Function</th>
@@ -118,50 +126,68 @@ function formatDuration(ms: number | null): string {
         </thead>
         <tbody>
           <tr v-for="call in functionsStore.functionCalls" :key="call.id">
-            <td style="font-family: monospace;">{{ call.function_name }}</td>
+            <td><code>{{ call.function_name }}</code></td>
             <td>
-              <span :class="['badge', getStatusBadgeClass(call.status)]">
+              <mark :data-status="getStatusType(call.status)">
                 {{ call.status }}
-              </span>
+              </mark>
             </td>
             <td>
-              <span class="badge badge-neutral">{{ call.trigger_type }}</span>
+              <mark data-status="neutral">{{ call.trigger_type }}</mark>
             </td>
-            <td class="text-muted">{{ formatDuration(call.duration_ms) }}</td>
-            <td class="text-muted">
+            <td><small class="text-muted">{{ formatDuration(call.duration_ms) }}</small></td>
+            <td><small class="text-muted">
               {{ call.started_at ? new Date(call.started_at).toLocaleString() : '-' }}
-            </td>
+            </small></td>
             <td>
-              <span v-if="call.error_message" class="text-error" style="font-size: 0.75rem;">
+              <small v-if="call.error_message" class="text-error">
                 {{ call.error_type }}: {{ call.error_message.slice(0, 50) }}...
-              </span>
-              <span v-else class="text-muted">-</span>
+              </small>
+              <small v-else class="text-muted">-</small>
             </td>
           </tr>
         </tbody>
       </table>
       
       <!-- Pagination -->
-      <div v-if="total > pageSize" class="flex justify-between items-center mt-2">
+      <footer v-if="total > pageSize">
         <button
-          class="btn btn-sm btn-secondary"
+          class="small secondary"
           :disabled="page === 1"
           @click="page--; loadCalls()"
         >
           Previous
         </button>
-        <span class="text-muted">
+        <small class="text-muted">
           Page {{ page }} of {{ Math.ceil(total / pageSize) }} ({{ total }} total)
-        </span>
+        </small>
         <button
-          class="btn btn-sm btn-secondary"
+          class="small secondary"
           :disabled="page >= Math.ceil(total / pageSize)"
           @click="page++; loadCalls()"
         >
           Next
         </button>
-      </div>
-    </div>
+      </footer>
+    </article>
   </div>
 </template>
 
+<style scoped>
+.filters {
+  margin-bottom: var(--tb-spacing-lg);
+}
+
+.filters .grid {
+  margin-bottom: var(--tb-spacing-md);
+}
+
+article > footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--tb-spacing-md);
+  padding-top: var(--tb-spacing-md);
+  border-top: 1px solid var(--tb-border);
+}
+</style>

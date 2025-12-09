@@ -8,20 +8,22 @@ Defines all core entities:
 - Record: Individual records within collections
 - FunctionCall: Execution metadata for function invocations
 - FunctionSchedule: Scheduled function execution configuration
+- InstanceSettings: Singleton for instance-wide configuration
 """
 
 from datetime import datetime, timezone
-from typing import Literal
 from uuid import UUID, uuid4
 
 from sqlalchemy import Column
 from sqlalchemy.types import JSON
 from sqlmodel import Field, SQLModel
 
-
-def utcnow() -> datetime:
-    """Return current UTC datetime (timezone-aware)."""
-    return datetime.now(timezone.utc)
+from tinybase.utils import (
+    utcnow,
+    FunctionCallStatus,
+    TriggerType,
+    ScheduleMethod,
+)
 
 
 # =============================================================================
@@ -140,9 +142,6 @@ class FunctionCall(SQLModel, table=True):
     Each invocation of a registered function creates a FunctionCall record
     to track execution status, timing, and any errors. Note that actual
     payloads and results are NOT stored - only metadata.
-    
-    Status values: "running", "succeeded", "failed"
-    Trigger types: "manual", "schedule"
     """
     
     __tablename__ = "function_call"
@@ -152,11 +151,11 @@ class FunctionCall(SQLModel, table=True):
     # The registered function name that was called
     function_name: str = Field(index=True, max_length=100)
     
-    # Execution status: "running", "succeeded", "failed"
-    status: str = Field(default="running", max_length=20)
+    # Execution status
+    status: FunctionCallStatus = Field(default=FunctionCallStatus.RUNNING)
     
-    # How the function was triggered: "manual", "schedule"
-    trigger_type: str = Field(default="manual", max_length=20)
+    # How the function was triggered
+    trigger_type: TriggerType = Field(default=TriggerType.MANUAL)
     trigger_id: UUID | None = Field(default=None)  # Schedule ID if triggered by scheduler
     
     # User who initiated the call (None for scheduled/system calls)
@@ -209,5 +208,43 @@ class FunctionSchedule(SQLModel, table=True):
     # Audit fields
     created_by_user_id: UUID | None = Field(default=None, foreign_key="user.id")
     created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
+
+
+# =============================================================================
+# Instance Settings Model (Singleton)
+# =============================================================================
+
+
+class InstanceSettings(SQLModel, table=True):
+    """
+    Singleton model for instance-wide configuration.
+    
+    There should only ever be one row in this table (id=1).
+    Settings here can be modified at runtime via the admin UI.
+    """
+    
+    __tablename__ = "instance_settings"
+    
+    id: int = Field(default=1, primary_key=True)  # Always 1 (singleton)
+    
+    # General settings
+    instance_name: str = Field(default="TinyBase", max_length=100)
+    
+    # Auth settings
+    allow_public_registration: bool = Field(default=True)
+    
+    # Server timezone (used for schedule defaults)
+    # If empty, schedules use UTC by default
+    server_timezone: str = Field(default="UTC", max_length=50)
+    
+    # File storage settings (S3-compatible)
+    storage_enabled: bool = Field(default=False)
+    storage_endpoint: str | None = Field(default=None, max_length=500)
+    storage_bucket: str | None = Field(default=None, max_length=100)
+    storage_access_key: str | None = Field(default=None, max_length=200)
+    storage_secret_key: str | None = Field(default=None, max_length=200)
+    storage_region: str | None = Field(default=None, max_length=50)
+    
     updated_at: datetime = Field(default_factory=utcnow)
 

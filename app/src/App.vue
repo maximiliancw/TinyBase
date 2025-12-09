@@ -3,6 +3,7 @@
  * Main App Component
  *
  * Provides the main layout with sidebar navigation and router outlet.
+ * Uses semantic HTML elements following PicoCSS conventions.
  */
 import { computed } from "vue";
 import { useRouter } from "vue-router";
@@ -24,105 +25,89 @@ function handleLogout() {
 </script>
 
 <template>
-  <div class="app-container">
-    <!-- Sidebar Navigation -->
+  <div id="app-root" :class="{ 'has-sidebar': showSidebar }">
+    <!-- Sidebar Navigation - uses semantic <aside> and <nav> -->
     <aside v-if="showSidebar" class="sidebar">
-      <div class="sidebar-brand">
+      <header>
         <h1>TinyBase</h1>
-      </div>
+      </header>
 
-      <nav id="app-nav">
-        <div class="sidebar-section">
-          <div
-            style="
-              font-size: 0.75rem;
-              color: var(--tb-primary);
-              margin-bottom: var(--tb-spacing-sm);
-            "
-          >
-            Admin
-          </div>
-          <ul class="sidebar-nav">
+      <nav aria-label="Main navigation">
+        <section>
+          <small>Admin</small>
+          <ul>
             <li>
-              <router-link to="/"> Dashboard </router-link>
-            </li>
-            <li>
-              <router-link to="/settings"> Settings </router-link>
-            </li>
-          </ul>
-        </div>
-
-        <div class="sidebar-section">
-          <div
-            style="
-              font-size: 0.75rem;
-              color: var(--tb-primary);
-              margin-bottom: var(--tb-spacing-sm);
-            "
-          >
-            Database
-          </div>
-          <ul class="sidebar-nav">
-            <li>
-              <router-link to="/users" class="sidebar-nav-link">
-                Users
+              <router-link to="/">
+                <span aria-hidden="true">📊</span> Dashboard
               </router-link>
             </li>
             <li>
-              <router-link to="/collections"> Collections </router-link>
+              <router-link to="/settings">
+                <span aria-hidden="true">⚙️</span> Settings
+              </router-link>
             </li>
           </ul>
-        </div>
+        </section>
 
-        <div v-if="authStore.isAdmin" class="sidebar-section">
-          <div
-            style="
-              font-size: 0.75rem;
-              color: var(--tb-primary);
-              margin-bottom: var(--tb-spacing-sm);
-            "
-          >
-            Functions
-          </div>
-          <ul class="sidebar-nav">
+        <section>
+          <small>Database</small>
+          <ul>
             <li>
-              <router-link to="/functions"> Overview </router-link>
+              <router-link to="/users">
+                <span aria-hidden="true">👥</span> Users
+              </router-link>
             </li>
             <li>
-              <router-link to="/schedules"> Schedules </router-link>
-            </li>
-            <li>
-              <router-link to="/function-calls"> Function Calls </router-link>
+              <router-link to="/collections">
+                <span aria-hidden="true">📁</span> Collections
+              </router-link>
             </li>
           </ul>
-        </div>
+        </section>
 
-        <div class="sidebar-section">
-          <ul class="sidebar-nav">
+        <section v-if="authStore.isAdmin">
+          <small>Functions</small>
+          <ul>
             <li>
-              <a href="#" @click.prevent="handleLogout"> Logout </a>
+              <router-link to="/functions">
+                <span aria-hidden="true">⚡</span> Overview
+              </router-link>
+            </li>
+            <li>
+              <router-link to="/schedules">
+                <span aria-hidden="true">🕐</span> Schedules
+              </router-link>
+            </li>
+            <li>
+              <router-link to="/function-calls">
+                <span aria-hidden="true">📋</span> Function Calls
+              </router-link>
             </li>
           </ul>
-        </div>
+        </section>
+
+        <section>
+          <ul>
+            <li>
+              <a href="#" @click.prevent="handleLogout">
+                <span aria-hidden="true">🚪</span> Logout
+              </a>
+            </li>
+          </ul>
+        </section>
       </nav>
 
-      <div
-        v-if="authStore.user"
-        class="sidebar-section"
-        style="margin-top: auto"
-      >
-        <div class="text-muted" style="font-size: 0.75rem; padding: 0 1rem">
+      <footer v-if="authStore.user">
+        <small class="text-muted">
           Logged in as<br />
           <strong>{{ authStore.user.email }}</strong>
-          <span v-if="authStore.isAdmin" class="badge badge-info ml-1"
-            >Admin</span
-          >
-        </div>
-      </div>
+          <mark v-if="authStore.isAdmin" data-status="info">Admin</mark>
+        </small>
+      </footer>
     </aside>
 
-    <!-- Main Content -->
-    <main :class="showSidebar ? 'main-content' : ''">
+    <!-- Main Content Area -->
+    <main>
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
           <component :is="Component" />
@@ -143,7 +128,18 @@ function handleLogout() {
   opacity: 0;
 }
 
-.ml-1 {
-  margin-left: 0.25rem;
+/* Sidebar footer positioning */
+aside.sidebar {
+  display: flex;
+  flex-direction: column;
+}
+
+aside.sidebar > footer {
+  margin-top: auto;
+  padding: var(--tb-spacing-md);
+}
+
+aside.sidebar > footer mark {
+  margin-left: var(--tb-spacing-xs);
 }
 </style>

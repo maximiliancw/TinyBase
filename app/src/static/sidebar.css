@@ -1,0 +1,84 @@
+/**
+ * Sidebar Navigation
+ * 
+ * Uses semantic <aside> and <nav> elements.
+ * See: https://picocss.com/docs/nav
+ */
+
+/* Sidebar container - uses <aside> */
+aside.sidebar {
+  width: var(--tb-sidebar-width);
+  background: var(--tb-bg-card);
+  border-right: 1px solid var(--tb-border);
+  padding: var(--tb-spacing-lg);
+  position: fixed;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+/* Brand/logo area */
+aside.sidebar > header h1 {
+  font-size: 1.5rem;
+  margin: 0;
+  color: var(--tb-primary);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+/* Navigation - using Pico's nav styling as base */
+aside.sidebar nav {
+  margin-top: var(--tb-spacing-lg);
+}
+
+aside.sidebar nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+aside.sidebar nav li {
+  margin-bottom: var(--tb-spacing-xs);
+}
+
+aside.sidebar nav a {
+  display: flex;
+  align-items: center;
+  gap: var(--tb-spacing-sm);
+  padding: var(--tb-spacing-sm) var(--tb-spacing-md);
+  color: var(--pico-muted-color);
+  text-decoration: none;
+  border-radius: var(--tb-radius);
+  transition: all 0.2s ease;
+}
+
+aside.sidebar nav a:hover {
+  background: var(--tb-bg-hover);
+  color: var(--tb-text);
+}
+
+/* Active link - Vue Router adds .router-link-active */
+aside.sidebar nav a.router-link-active {
+  background: color-mix(in srgb, var(--tb-primary) 30%, transparent);
+  color: var(--tb-primary);
+}
+
+/* Nav icon (emoji or icon font) */
+aside.sidebar nav a span[aria-hidden] {
+  font-size: 0.875rem;
+}
+
+/* Section divider within sidebar */
+aside.sidebar section {
+  margin-top: var(--tb-spacing-lg);
+  padding-top: var(--tb-spacing-md);
+  border-top: 1px solid var(--tb-border);
+}
+
+aside.sidebar section > small {
+  display: block;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--pico-muted-color);
+  margin-bottom: var(--tb-spacing-sm);
+}

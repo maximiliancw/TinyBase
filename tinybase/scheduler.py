@@ -7,22 +7,22 @@ when their next_run_at time is reached.
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlmodel import Session, select
 
+from tinybase.auth import cleanup_expired_tokens
 from tinybase.config import settings
 from tinybase.db.core import get_engine
 from tinybase.db.models import FunctionSchedule
 from tinybase.functions.core import execute_function, get_global_registry
 from tinybase.scheduling import parse_schedule_config
+from tinybase.utils import utcnow, TriggerType
 
 logger = logging.getLogger(__name__)
 
-
-def utcnow() -> datetime:
-    """Return current UTC datetime (timezone-aware)."""
-    return datetime.now(timezone.utc)
+# How often to run token cleanup (every N scheduler intervals)
+TOKEN_CLEANUP_INTERVAL = 60  # e.g., every 60 * 5s = 5 minutes
 
 
 class Scheduler:
@@ -32,12 +32,15 @@ class Scheduler:
     The scheduler runs as an asyncio task and periodically checks
     for due schedules. When a schedule's next_run_at time is reached,
     the associated function is executed and the schedule is updated.
+    
+    Also handles periodic cleanup tasks like removing expired tokens.
     """
     
     def __init__(self) -> None:
         """Initialize the scheduler."""
         self._running = False
         self._task: asyncio.Task | None = None
+        self._tick_count = 0
     
     async def start(self) -> None:
         """Start the scheduler background task."""
@@ -67,16 +70,33 @@ class Scheduler:
         Main scheduler loop.
         
         Runs every `scheduler_interval_seconds` and processes any due schedules.
+        Also performs periodic maintenance tasks like token cleanup.
         """
         interval = settings().scheduler_interval_seconds
         
         while self._running:
             try:
                 await self._process_due_schedules()
+                
+                # Periodic token cleanup
+                self._tick_count += 1
+                if self._tick_count >= TOKEN_CLEANUP_INTERVAL:
+                    self._tick_count = 0
+                    await self._run_maintenance()
+                    
             except Exception as e:
                 logger.exception(f"Error in scheduler loop: {e}")
             
             await asyncio.sleep(interval)
+    
+    async def _run_maintenance(self) -> None:
+        """Run periodic maintenance tasks."""
+        engine = get_engine()
+        with Session(engine) as session:
+            try:
+                cleanup_expired_tokens(session)
+            except Exception as e:
+                logger.exception(f"Error during token cleanup: {e}")
     
     async def _process_due_schedules(self) -> None:
         """Find and execute all due schedules."""
@@ -132,7 +152,7 @@ class Scheduler:
                 meta=meta,
                 payload={},  # Scheduled functions don't receive payloads
                 session=session,
-                trigger_type="schedule",
+                trigger_type=TriggerType.SCHEDULE,
                 trigger_id=schedule.id,
             )
         except Exception as e:

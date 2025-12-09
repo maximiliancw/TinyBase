@@ -3,6 +3,7 @@
  * Users View
  * 
  * Manage user accounts (admin only).
+ * Uses semantic HTML elements following PicoCSS conventions.
  */
 import { onMounted, ref } from 'vue'
 import { useUsersStore } from '../stores/users'
@@ -40,26 +41,25 @@ async function handleDelete(userId: string) {
 </script>
 
 <template>
-  <div class="fade-in">
-    <header class="page-header flex justify-between items-center">
-      <div>
+  <div data-animate="fade-in">
+    <header class="page-header">
+      <hgroup>
         <h1>Users</h1>
         <p>Manage user accounts</p>
-      </div>
-      <button class="btn btn-primary" @click="showCreateModal = true">
+      </hgroup>
+      <button @click="showCreateModal = true">
         + New User
       </button>
     </header>
     
-    <div v-if="usersStore.loading" class="card">
-      <div class="flex items-center gap-2">
-        <span class="spinner"></span>
-        Loading users...
-      </div>
-    </div>
+    <!-- Loading State -->
+    <article v-if="usersStore.loading" aria-busy="true">
+      Loading users...
+    </article>
     
-    <div v-else class="card">
-      <table class="data-table">
+    <!-- Users Table -->
+    <article v-else>
+      <table>
         <thead>
           <tr>
             <th>Email</th>
@@ -72,80 +72,76 @@ async function handleDelete(userId: string) {
           <tr v-for="user in usersStore.users" :key="user.id">
             <td>{{ user.email }}</td>
             <td>
-              <span :class="['badge', user.is_admin ? 'badge-info' : 'badge-neutral']">
+              <mark :data-status="user.is_admin ? 'info' : 'neutral'">
                 {{ user.is_admin ? 'Admin' : 'User' }}
-              </span>
+              </mark>
             </td>
-            <td class="text-muted">
-              {{ new Date(user.created_at).toLocaleDateString() }}
-            </td>
-            <td class="flex gap-1">
-              <button
-                class="btn btn-sm btn-secondary"
-                @click="handleToggleAdmin(user.id, user.is_admin)"
-              >
-                {{ user.is_admin ? 'Remove Admin' : 'Make Admin' }}
-              </button>
-              <button class="btn btn-sm btn-danger" @click="handleDelete(user.id)">
-                Delete
-              </button>
+            <td><small class="text-muted">{{ new Date(user.created_at).toLocaleDateString() }}</small></td>
+            <td>
+              <div role="group">
+                <button
+                  class="small secondary"
+                  @click="handleToggleAdmin(user.id, user.is_admin)"
+                >
+                  {{ user.is_admin ? 'Remove Admin' : 'Make Admin' }}
+                </button>
+                <button class="small contrast" @click="handleDelete(user.id)">
+                  Delete
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
       </table>
-    </div>
+    </article>
     
-    <!-- Create User Modal -->
-    <dialog v-if="showCreateModal" open class="modal">
-      <article class="card" style="max-width: 400px; margin: 2rem auto;">
-        <header class="card-header">
-          <h3 class="card-title">Create User</h3>
-          <button class="btn btn-sm btn-secondary" @click="showCreateModal = false">✕</button>
+    <!-- Create User Modal - using Pico's dialog element -->
+    <dialog :open="showCreateModal">
+      <article>
+        <header>
+          <button aria-label="Close" rel="prev" @click="showCreateModal = false"></button>
+          <h3>Create User</h3>
         </header>
         
         <form @submit.prevent="handleCreate">
-          <div class="form-group">
-            <label class="form-label" for="email">Email</label>
+          <label for="email">
+            Email
             <input
               id="email"
               v-model="newUser.email"
               type="email"
-              class="form-input"
               required
             />
-          </div>
+          </label>
           
-          <div class="form-group">
-            <label class="form-label" for="password">Password</label>
+          <label for="password">
+            Password
             <input
               id="password"
               v-model="newUser.password"
               type="password"
-              class="form-input"
               minlength="8"
               required
             />
-          </div>
+          </label>
           
-          <div class="form-group">
-            <label class="flex items-center gap-2">
-              <input type="checkbox" v-model="newUser.is_admin" />
-              Admin privileges
-            </label>
-          </div>
+          <label>
+            <input type="checkbox" v-model="newUser.is_admin" role="switch" />
+            Admin privileges
+          </label>
           
-          <div v-if="usersStore.error" class="text-error mb-2">
+          <small v-if="usersStore.error" class="text-error">
             {{ usersStore.error }}
-          </div>
+          </small>
           
-          <div class="flex gap-2 justify-between">
-            <button type="button" class="btn btn-secondary" @click="showCreateModal = false">
+          <footer>
+            <button type="button" class="secondary" @click="showCreateModal = false">
               Cancel
             </button>
-            <button type="submit" class="btn btn-primary" :disabled="usersStore.loading">
-              Create User
+            <button type="submit" :aria-busy="usersStore.loading" :disabled="usersStore.loading">
+              {{ usersStore.loading ? '' : 'Create User' }}
             </button>
-          </div>
+          </footer>
         </form>
       </article>
     </dialog>
@@ -153,29 +149,30 @@ async function handleDelete(userId: string) {
 </template>
 
 <style scoped>
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+/* Page header layout */
+.page-header {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  border: none;
-  padding: 0;
-  margin: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
+  justify-content: space-between;
+  align-items: flex-start;
 }
 
-.modal article {
-  background: var(--tb-bg-card);
-  width: 100%;
+.page-header hgroup {
+  margin: 0;
+}
+
+.page-header hgroup h1 {
+  margin-bottom: var(--tb-spacing-xs);
+}
+
+.page-header hgroup p {
+  margin: 0;
+  color: var(--pico-muted-color);
+}
+
+/* Dialog footer buttons */
+dialog article footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--tb-spacing-sm);
 }
 </style>
-

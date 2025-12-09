@@ -1,0 +1,108 @@
+/**
+ * TinyBase Theme
+ * 
+ * Custom properties and Pico CSS variable overrides.
+ * Based on a distinctive dark theme with cyan/teal accents.
+ */
+
+:root {
+  /* Brand colors */
+  --tb-primary: #00d4aa;
+  --tb-primary-hover: #00b894;
+  --tb-primary-focus: rgba(0, 212, 170, 0.25);
+  --tb-primary-inverse: #0f1419;
+  
+  /* Background colors */
+  --tb-bg-dark: #0f1419;
+  --tb-bg-card: #1a202c;
+  --tb-bg-hover: #2d3748;
+  --tb-border: #2d3748;
+  
+  /* Text colors */
+  --tb-text: #e2e8f0;
+  --tb-text-muted: #a0aec0;
+  --tb-text-heading: #f7fafc;
+  
+  /* Status colors */
+  --tb-success: #48bb78;
+  --tb-warning: #f6ad55;
+  --tb-error: #fc8181;
+  --tb-info: #63b3ed;
+  
+  /* Spacing (use Pico's --pico-spacing where possible) */
+  --tb-spacing-xs: 0.25rem;
+  --tb-spacing-sm: 0.5rem;
+  --tb-spacing-md: 1rem;
+  --tb-spacing-lg: 1.5rem;
+  --tb-spacing-xl: 2rem;
+  
+  /* Border radius */
+  --tb-radius: 0.5rem;
+  --tb-radius-lg: 0.75rem;
+  
+  /* Sidebar width */
+  --tb-sidebar-width: 260px;
+}
+
+/**
+ * Override Pico's CSS variables for dark theme.
+ * See: https://picocss.com/docs/css-variables
+ */
+[data-theme="dark"],
+:root:not([data-theme="light"]) {
+  /* Primary color */
+  --pico-primary: var(--tb-primary);
+  --pico-primary-hover: var(--tb-primary-hover);
+  --pico-primary-focus: var(--tb-primary-focus);
+  --pico-primary-inverse: var(--tb-primary-inverse);
+  
+  /* Background colors */
+  --pico-background-color: var(--tb-bg-dark);
+  --pico-card-background-color: var(--tb-bg-card);
+  --pico-card-sectioning-background-color: var(--tb-bg-card);
+  
+  /* Text colors */
+  --pico-color: var(--tb-text);
+  --pico-h1-color: var(--tb-text-heading);
+  --pico-h2-color: var(--tb-text-heading);
+  --pico-h3-color: var(--tb-text-heading);
+  --pico-h4-color: var(--tb-text-heading);
+  --pico-muted-color: var(--tb-text-muted);
+  
+  /* Border colors */
+  --pico-muted-border-color: var(--tb-border);
+  --pico-card-border-color: var(--tb-border);
+  --pico-table-border-color: var(--tb-border);
+  
+  /* Form colors */
+  --pico-form-element-background-color: var(--tb-bg-dark);
+  --pico-form-element-border-color: var(--tb-border);
+  --pico-form-element-focus-color: var(--tb-primary);
+  
+  /* Secondary button */
+  --pico-secondary: var(--tb-border);
+  --pico-secondary-hover: var(--tb-bg-hover);
+  --pico-secondary-inverse: var(--tb-text);
+  
+  /* Contrast button (for danger actions) */
+  --pico-contrast: var(--tb-error);
+  --pico-contrast-hover: #e53e3e;
+  --pico-contrast-inverse: white;
+}
+
+/* Global styles */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--tb-bg-dark);
+  min-height: 100vh;
+  margin: 0;
+}
+
+/* Ensure no margin on Vue mount point */
+#app {
+  margin: 0;
+}
+

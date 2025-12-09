@@ -4,17 +4,19 @@ Admin API routes.
 Provides admin-only endpoints for:
 - Function call history
 - User management
+- Instance settings
 """
 
-from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
+from sqlalchemy import func
 from sqlmodel import select
 
 from tinybase.auth import CurrentAdminUser, DbSession, hash_password
-from tinybase.db.models import FunctionCall, User
+from tinybase.db.models import FunctionCall, InstanceSettings, User
+from tinybase.utils import FunctionCallStatus, TriggerType, utcnow
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -134,33 +136,41 @@ def list_function_calls(
     session: DbSession,
     _admin: CurrentAdminUser,
     function_name: str | None = Query(default=None, description="Filter by function name"),
-    status_filter: Literal["running", "succeeded", "failed"] | None = Query(
+    status_filter: FunctionCallStatus | None = Query(
         default=None,
         alias="status",
         description="Filter by status"
     ),
-    trigger_type: Literal["manual", "schedule"] | None = Query(
+    trigger_type_filter: TriggerType | None = Query(
         default=None,
+        alias="trigger_type",
         description="Filter by trigger type"
     ),
     limit: int = Query(default=100, ge=1, le=1000, description="Page size"),
     offset: int = Query(default=0, ge=0, description="Page offset"),
 ) -> FunctionCallListResponse:
     """List function calls with filtering and pagination."""
-    # Build query
+    # Build count query with filters
+    count_stmt = select(func.count(FunctionCall.id))
+    
+    if function_name:
+        count_stmt = count_stmt.where(FunctionCall.function_name == function_name)
+    if status_filter:
+        count_stmt = count_stmt.where(FunctionCall.status == status_filter)
+    if trigger_type_filter:
+        count_stmt = count_stmt.where(FunctionCall.trigger_type == trigger_type_filter)
+    
+    total = session.exec(count_stmt).one()
+    
+    # Build data query with filters
     query = select(FunctionCall)
     
     if function_name:
         query = query.where(FunctionCall.function_name == function_name)
     if status_filter:
         query = query.where(FunctionCall.status == status_filter)
-    if trigger_type:
-        query = query.where(FunctionCall.trigger_type == trigger_type)
-    
-    # Get total count (before pagination)
-    count_query = query
-    all_results = list(session.exec(count_query).all())
-    total = len(all_results)
+    if trigger_type_filter:
+        query = query.where(FunctionCall.trigger_type == trigger_type_filter)
     
     # Apply pagination and ordering
     query = query.order_by(FunctionCall.created_at.desc())  # type: ignore
@@ -217,9 +227,8 @@ def list_users(
     offset: int = Query(default=0, ge=0, description="Page offset"),
 ) -> UserListResponse:
     """List all users with pagination."""
-    # Get total count
-    all_users = list(session.exec(select(User)).all())
-    total = len(all_users)
+    # Get total count efficiently
+    total = session.exec(select(func.count(User.id))).one()
     
     # Get paginated results
     query = select(User).offset(offset).limit(limit)
@@ -329,6 +338,16 @@ def update_user(
         user.password_hash = hash_password(request.password)
     
     if request.is_admin is not None:
+        # Prevent demoting the last admin
+        if user.is_admin and not request.is_admin:
+            admin_count = session.exec(
+                select(func.count(User.id)).where(User.is_admin == True)
+            ).one()
+            if admin_count <= 1:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Cannot demote the last admin user",
+                )
         user.is_admin = request.is_admin
     
     session.add(user)
@@ -365,6 +384,141 @@ def delete_user(
             detail=f"User '{user_id}' not found",
         )
     
+    # Prevent deleting the last admin
+    if user.is_admin:
+        admin_count = session.exec(
+            select(func.count(User.id)).where(User.is_admin == True)
+        ).one()
+        if admin_count <= 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot delete the last admin user",
+            )
+    
     session.delete(user)
     session.commit()
+
+
+# =============================================================================
+# Instance Settings Routes
+# =============================================================================
+
+
+class InstanceSettingsResponse(BaseModel):
+    """Instance settings response."""
+    
+    instance_name: str = Field(description="Instance name")
+    allow_public_registration: bool = Field(description="Allow public registration")
+    server_timezone: str = Field(description="Server timezone")
+    storage_enabled: bool = Field(description="File storage enabled")
+    storage_endpoint: str | None = Field(default=None, description="S3 endpoint")
+    storage_bucket: str | None = Field(default=None, description="S3 bucket name")
+    storage_region: str | None = Field(default=None, description="S3 region")
+    # Note: access_key and secret_key are not returned for security
+    updated_at: str = Field(description="Last update time")
+
+
+class InstanceSettingsUpdate(BaseModel):
+    """Instance settings update request."""
+    
+    instance_name: str | None = Field(default=None, max_length=100)
+    allow_public_registration: bool | None = Field(default=None)
+    server_timezone: str | None = Field(default=None, max_length=50)
+    storage_enabled: bool | None = Field(default=None)
+    storage_endpoint: str | None = Field(default=None, max_length=500)
+    storage_bucket: str | None = Field(default=None, max_length=100)
+    storage_access_key: str | None = Field(default=None, max_length=200)
+    storage_secret_key: str | None = Field(default=None, max_length=200)
+    storage_region: str | None = Field(default=None, max_length=50)
+
+
+def settings_to_response(settings: InstanceSettings) -> InstanceSettingsResponse:
+    """Convert InstanceSettings model to response schema."""
+    return InstanceSettingsResponse(
+        instance_name=settings.instance_name,
+        allow_public_registration=settings.allow_public_registration,
+        server_timezone=settings.server_timezone,
+        storage_enabled=settings.storage_enabled,
+        storage_endpoint=settings.storage_endpoint,
+        storage_bucket=settings.storage_bucket,
+        storage_region=settings.storage_region,
+        updated_at=settings.updated_at.isoformat(),
+    )
+
+
+def get_or_create_settings(session: DbSession) -> InstanceSettings:
+    """Get the singleton settings instance, creating it if it doesn't exist."""
+    settings = session.get(InstanceSettings, 1)
+    if settings is None:
+        settings = InstanceSettings(id=1)
+        session.add(settings)
+        session.commit()
+        session.refresh(settings)
+    return settings
+
+
+@router.get(
+    "/settings",
+    response_model=InstanceSettingsResponse,
+    summary="Get instance settings",
+    description="Get the current instance configuration.",
+)
+def get_settings(
+    session: DbSession,
+    _admin: CurrentAdminUser,
+) -> InstanceSettingsResponse:
+    """Get current instance settings."""
+    settings = get_or_create_settings(session)
+    return settings_to_response(settings)
+
+
+@router.patch(
+    "/settings",
+    response_model=InstanceSettingsResponse,
+    summary="Update instance settings",
+    description="Update the instance configuration.",
+)
+def update_settings(
+    request: InstanceSettingsUpdate,
+    session: DbSession,
+    _admin: CurrentAdminUser,
+) -> InstanceSettingsResponse:
+    """Update instance settings."""
+    settings = get_or_create_settings(session)
+    
+    # Update only provided fields
+    if request.instance_name is not None:
+        settings.instance_name = request.instance_name
+    if request.allow_public_registration is not None:
+        settings.allow_public_registration = request.allow_public_registration
+    if request.server_timezone is not None:
+        # Validate timezone
+        import zoneinfo
+        try:
+            zoneinfo.ZoneInfo(request.server_timezone)
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid timezone: {request.server_timezone}",
+            )
+        settings.server_timezone = request.server_timezone
+    if request.storage_enabled is not None:
+        settings.storage_enabled = request.storage_enabled
+    if request.storage_endpoint is not None:
+        settings.storage_endpoint = request.storage_endpoint
+    if request.storage_bucket is not None:
+        settings.storage_bucket = request.storage_bucket
+    if request.storage_access_key is not None:
+        settings.storage_access_key = request.storage_access_key
+    if request.storage_secret_key is not None:
+        settings.storage_secret_key = request.storage_secret_key
+    if request.storage_region is not None:
+        settings.storage_region = request.storage_region
+    
+    settings.updated_at = utcnow()
+    session.add(settings)
+    session.commit()
+    session.refresh(settings)
+    
+    return settings_to_response(settings)
 

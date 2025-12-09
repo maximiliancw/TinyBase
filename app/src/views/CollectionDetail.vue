@@ -3,6 +3,7 @@
  * Collection Detail View
  * 
  * View and manage records in a collection.
+ * Uses semantic HTML elements following PicoCSS conventions.
  */
 import { onMounted, ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
@@ -62,56 +63,57 @@ function getFieldNames() {
 </script>
 
 <template>
-  <div class="fade-in">
-    <header class="page-header flex justify-between items-center">
-      <div>
+  <div data-animate="fade-in">
+    <header class="page-header">
+      <hgroup>
         <h1>{{ collectionsStore.currentCollection?.label || collectionName }}</h1>
-        <p>Collection: {{ collectionName }}</p>
-      </div>
-      <button class="btn btn-primary" @click="showCreateModal = true">
+        <p>Collection: <code>{{ collectionName }}</code></p>
+      </hgroup>
+      <button @click="showCreateModal = true">
         + New Record
       </button>
     </header>
     
     <!-- Schema Info -->
-    <div class="card mb-3">
-      <div class="card-header">
-        <h3 class="card-title">Schema</h3>
-      </div>
-      <div v-if="collectionsStore.currentCollection" class="flex gap-2" style="flex-wrap: wrap;">
-        <span
+    <article class="schema-card">
+      <header>
+        <h3>Schema</h3>
+      </header>
+      <div v-if="collectionsStore.currentCollection" class="schema-fields">
+        <mark
           v-for="field in collectionsStore.currentCollection.schema?.fields || []"
           :key="field.name"
-          class="badge badge-neutral"
+          data-status="neutral"
         >
           {{ field.name }}
-          <span class="text-muted">({{ field.type }})</span>
-          <span v-if="field.required" class="text-warning">*</span>
-        </span>
+          <small class="text-muted">({{ field.type }})</small>
+          <small v-if="field.required" class="text-warning">*</small>
+        </mark>
       </div>
-    </div>
+    </article>
     
     <!-- Records Table -->
-    <div class="card">
-      <div class="card-header">
-        <h3 class="card-title">Records ({{ total }})</h3>
-      </div>
+    <article>
+      <header>
+        <h3>Records ({{ total }})</h3>
+      </header>
       
-      <div v-if="collectionsStore.loading" class="flex items-center gap-2">
-        <span class="spinner"></span>
+      <!-- Loading State -->
+      <div v-if="collectionsStore.loading" aria-busy="true">
         Loading records...
       </div>
       
-      <div v-else-if="records.length === 0" class="empty-state">
-        <div class="empty-state-icon">📄</div>
+      <!-- Empty State -->
+      <div v-else-if="records.length === 0" data-empty data-empty-icon="📄">
         <p>No records yet</p>
-        <button class="btn btn-primary btn-sm mt-2" @click="showCreateModal = true">
+        <button class="small mt-2" @click="showCreateModal = true">
           Create Record
         </button>
       </div>
       
-      <div v-else style="overflow-x: auto;">
-        <table class="data-table">
+      <!-- Records Table -->
+      <div v-else class="table-wrapper">
+        <table>
           <thead>
             <tr>
               <th>ID</th>
@@ -124,18 +126,14 @@ function getFieldNames() {
           </thead>
           <tbody>
             <tr v-for="record in records" :key="record.id">
-              <td class="text-muted" style="font-family: monospace; font-size: 0.75rem;">
-                {{ record.id.slice(0, 8) }}...
-              </td>
+              <td><code class="text-muted">{{ record.id.slice(0, 8) }}...</code></td>
               <td v-for="field in getFieldNames().slice(0, 5)" :key="field">
                 {{ typeof record.data[field] === 'object' ? JSON.stringify(record.data[field]) : record.data[field] }}
               </td>
-              <td class="text-muted">
-                {{ new Date(record.created_at).toLocaleDateString() }}
-              </td>
+              <td><small class="text-muted">{{ new Date(record.created_at).toLocaleDateString() }}</small></td>
               <td>
                 <button
-                  class="btn btn-sm btn-danger"
+                  class="small contrast"
                   @click="handleDeleteRecord(record.id)"
                   :disabled="!authStore.isAdmin && record.owner_id !== authStore.user?.id"
                 >
@@ -148,63 +146,62 @@ function getFieldNames() {
       </div>
       
       <!-- Pagination -->
-      <div v-if="total > pageSize" class="flex justify-between items-center mt-2">
+      <footer v-if="total > pageSize">
         <button
-          class="btn btn-sm btn-secondary"
+          class="small secondary"
           :disabled="page === 1"
           @click="page--; loadRecords()"
         >
           Previous
         </button>
-        <span class="text-muted">
+        <small class="text-muted">
           Page {{ page }} of {{ Math.ceil(total / pageSize) }}
-        </span>
+        </small>
         <button
-          class="btn btn-sm btn-secondary"
+          class="small secondary"
           :disabled="page >= Math.ceil(total / pageSize)"
           @click="page++; loadRecords()"
         >
           Next
         </button>
-      </div>
-    </div>
+      </footer>
+    </article>
     
     <!-- Create Record Modal -->
-    <dialog v-if="showCreateModal" open class="modal">
-      <article class="card" style="max-width: 600px; margin: 2rem auto;">
-        <header class="card-header">
-          <h3 class="card-title">Create Record</h3>
-          <button class="btn btn-sm btn-secondary" @click="showCreateModal = false">✕</button>
+    <dialog :open="showCreateModal">
+      <article>
+        <header>
+          <button aria-label="Close" rel="prev" @click="showCreateModal = false"></button>
+          <h3>Create Record</h3>
         </header>
         
         <form @submit.prevent="handleCreateRecord">
-          <div class="form-group">
-            <label class="form-label" for="data">Record Data (JSON)</label>
+          <label for="data">
+            Record Data (JSON)
             <textarea
               id="data"
               v-model="newRecordData"
-              class="form-input"
               rows="10"
               style="font-family: monospace; font-size: 0.875rem;"
               required
             ></textarea>
-            <p class="text-muted" style="font-size: 0.75rem; margin-top: 0.5rem;">
+            <small class="text-muted">
               Fields: {{ getFieldNames().join(', ') }}
-            </p>
-          </div>
+            </small>
+          </label>
           
-          <div v-if="collectionsStore.error" class="text-error mb-2">
+          <small v-if="collectionsStore.error" class="text-error">
             {{ collectionsStore.error }}
-          </div>
+          </small>
           
-          <div class="flex gap-2 justify-between">
-            <button type="button" class="btn btn-secondary" @click="showCreateModal = false">
+          <footer>
+            <button type="button" class="secondary" @click="showCreateModal = false">
               Cancel
             </button>
-            <button type="submit" class="btn btn-primary" :disabled="collectionsStore.loading">
-              Create Record
+            <button type="submit" :aria-busy="collectionsStore.loading" :disabled="collectionsStore.loading">
+              {{ collectionsStore.loading ? '' : 'Create Record' }}
             </button>
-          </div>
+          </footer>
         </form>
       </article>
     </dialog>
@@ -212,29 +209,62 @@ function getFieldNames() {
 </template>
 
 <style scoped>
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+/* Page header layout */
+.page-header {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  border: none;
-  padding: 0;
-  margin: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
+  justify-content: space-between;
+  align-items: flex-start;
 }
 
-.modal article {
-  background: var(--tb-bg-card);
-  width: 100%;
+.page-header hgroup {
+  margin: 0;
+}
+
+.page-header hgroup h1 {
+  margin-bottom: var(--tb-spacing-xs);
+}
+
+.page-header hgroup p {
+  margin: 0;
+  color: var(--pico-muted-color);
+}
+
+/* Schema card */
+.schema-card {
+  margin-bottom: var(--tb-spacing-lg);
+}
+
+.schema-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tb-spacing-sm);
+}
+
+.schema-fields mark {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tb-spacing-xs);
+}
+
+/* Table wrapper for horizontal scroll */
+.table-wrapper {
+  overflow-x: auto;
+}
+
+/* Pagination footer */
+article > footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--tb-spacing-md);
+  padding-top: var(--tb-spacing-md);
+  border-top: 1px solid var(--tb-border);
+}
+
+/* Dialog footer buttons */
+dialog article footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--tb-spacing-sm);
 }
 </style>
-
