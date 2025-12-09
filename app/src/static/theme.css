@@ -1,55 +1,102 @@
 /**
  * TinyBase Theme
  * 
- * Custom properties and Pico CSS variable overrides.
- * Based on a distinctive dark theme with cyan/teal accents.
+ * A modern, premium dark theme inspired by Linear, Vercel, and Railway.
+ * Features subtle gradients, refined typography, and layered depth.
  */
 
+/* Import distinctive fonts */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
 :root {
-  /* Brand colors */
-  --tb-primary: #00d4aa;
-  --tb-primary-hover: #00b894;
-  --tb-primary-focus: rgba(0, 212, 170, 0.25);
-  --tb-primary-inverse: #0f1419;
+  /* Typography */
+  --tb-font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --tb-font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
   
-  /* Background colors */
-  --tb-bg-dark: #0f1419;
-  --tb-bg-card: #1a202c;
-  --tb-bg-hover: #2d3748;
-  --tb-border: #2d3748;
+  /* Brand colors - Electric violet with cyan accents */
+  --tb-primary: #a78bfa;
+  --tb-primary-hover: #c4b5fd;
+  --tb-primary-focus: rgba(167, 139, 250, 0.25);
+  --tb-primary-inverse: #0c0a14;
+  --tb-primary-glow: rgba(167, 139, 250, 0.4);
+  
+  /* Accent gradient */
+  --tb-gradient-primary: linear-gradient(135deg, #a78bfa 0%, #818cf8 50%, #6366f1 100%);
+  --tb-gradient-accent: linear-gradient(135deg, #06b6d4 0%, #a78bfa 100%);
+  
+  /* Background colors - Deep space palette */
+  --tb-bg-base: #09090b;
+  --tb-bg-dark: #0c0c0f;
+  --tb-bg-card: #141419;
+  --tb-bg-elevated: #1a1a21;
+  --tb-bg-hover: #222230;
+  --tb-bg-active: #2a2a3a;
+  
+  /* Surface overlays for depth */
+  --tb-surface-1: rgba(255, 255, 255, 0.02);
+  --tb-surface-2: rgba(255, 255, 255, 0.04);
+  --tb-surface-3: rgba(255, 255, 255, 0.06);
+  
+  /* Border colors */
+  --tb-border: rgba(255, 255, 255, 0.08);
+  --tb-border-subtle: rgba(255, 255, 255, 0.05);
+  --tb-border-strong: rgba(255, 255, 255, 0.12);
   
   /* Text colors */
-  --tb-text: #e2e8f0;
-  --tb-text-muted: #a0aec0;
-  --tb-text-heading: #f7fafc;
+  --tb-text: #f4f4f5;
+  --tb-text-secondary: #a1a1aa;
+  --tb-text-muted: #71717a;
+  --tb-text-heading: #fafafa;
   
-  /* Status colors */
-  --tb-success: #48bb78;
-  --tb-warning: #f6ad55;
-  --tb-error: #fc8181;
-  --tb-info: #63b3ed;
+  /* Status colors - Vibrant but refined */
+  --tb-success: #34d399;
+  --tb-success-bg: rgba(52, 211, 153, 0.12);
+  --tb-warning: #fbbf24;
+  --tb-warning-bg: rgba(251, 191, 36, 0.12);
+  --tb-error: #f87171;
+  --tb-error-bg: rgba(248, 113, 113, 0.12);
+  --tb-info: #60a5fa;
+  --tb-info-bg: rgba(96, 165, 250, 0.12);
   
-  /* Spacing (use Pico's --pico-spacing where possible) */
+  /* Spacing scale */
   --tb-spacing-xs: 0.25rem;
   --tb-spacing-sm: 0.5rem;
   --tb-spacing-md: 1rem;
   --tb-spacing-lg: 1.5rem;
   --tb-spacing-xl: 2rem;
+  --tb-spacing-2xl: 3rem;
   
   /* Border radius */
+  --tb-radius-sm: 0.375rem;
   --tb-radius: 0.5rem;
   --tb-radius-lg: 0.75rem;
+  --tb-radius-xl: 1rem;
   
-  /* Sidebar width */
+  /* Shadows - Layered depth */
+  --tb-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --tb-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --tb-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+  --tb-shadow-glow: 0 0 20px var(--tb-primary-glow);
+  
+  /* Transitions */
+  --tb-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --tb-transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --tb-transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Sidebar */
   --tb-sidebar-width: 260px;
 }
 
 /**
- * Override Pico's CSS variables for dark theme.
- * See: https://picocss.com/docs/css-variables
+ * Override Pico's CSS variables for our dark theme.
  */
 [data-theme="dark"],
 :root:not([data-theme="light"]) {
+  /* Typography */
+  --pico-font-family: var(--tb-font-sans);
+  --pico-font-size: 0.9375rem;
+  --pico-line-height: 1.6;
+  
   /* Primary color */
   --pico-primary: var(--tb-primary);
   --pico-primary-hover: var(--tb-primary-hover);
@@ -57,9 +104,9 @@
   --pico-primary-inverse: var(--tb-primary-inverse);
   
   /* Background colors */
-  --pico-background-color: var(--tb-bg-dark);
+  --pico-background-color: var(--tb-bg-base);
   --pico-card-background-color: var(--tb-bg-card);
-  --pico-card-sectioning-background-color: var(--tb-bg-card);
+  --pico-card-sectioning-background-color: var(--tb-bg-elevated);
   
   /* Text colors */
   --pico-color: var(--tb-text);
@@ -72,33 +119,42 @@
   /* Border colors */
   --pico-muted-border-color: var(--tb-border);
   --pico-card-border-color: var(--tb-border);
-  --pico-table-border-color: var(--tb-border);
+  --pico-table-border-color: var(--tb-border-subtle);
   
   /* Form colors */
-  --pico-form-element-background-color: var(--tb-bg-dark);
+  --pico-form-element-background-color: var(--tb-bg-elevated);
   --pico-form-element-border-color: var(--tb-border);
   --pico-form-element-focus-color: var(--tb-primary);
   
   /* Secondary button */
-  --pico-secondary: var(--tb-border);
-  --pico-secondary-hover: var(--tb-bg-hover);
+  --pico-secondary: var(--tb-bg-hover);
+  --pico-secondary-hover: var(--tb-bg-active);
   --pico-secondary-inverse: var(--tb-text);
   
-  /* Contrast button (for danger actions) */
+  /* Contrast button */
   --pico-contrast: var(--tb-error);
-  --pico-contrast-hover: #e53e3e;
+  --pico-contrast-hover: #ef4444;
   --pico-contrast-inverse: white;
+  
+  /* Spacing adjustments */
+  --pico-spacing: var(--tb-spacing-lg);
+  --pico-block-spacing-vertical: var(--tb-spacing-lg);
+  --pico-block-spacing-horizontal: var(--tb-spacing-lg);
 }
 
 /* Global styles */
 html {
   scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  background: var(--tb-bg-dark);
+  background: var(--tb-bg-base);
   min-height: 100vh;
   margin: 0;
+  font-family: var(--tb-font-sans);
+  letter-spacing: -0.01em;
 }
 
 /* Ensure no margin on Vue mount point */
@@ -106,3 +162,52 @@ body {
   margin: 0;
 }
 
+/* Typography refinements */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+h1 { font-size: 1.875rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.25rem; }
+h4 { font-size: 1.125rem; }
+
+/* Code styling */
+code, kbd, pre, samp {
+  font-family: var(--tb-font-mono);
+  font-size: 0.875em;
+}
+
+code {
+  background: var(--tb-bg-elevated);
+  border: 1px solid var(--tb-border-subtle);
+  border-radius: var(--tb-radius-sm);
+  padding: 0.125em 0.375em;
+  color: var(--tb-primary);
+}
+
+pre {
+  background: var(--tb-bg-dark);
+  border: 1px solid var(--tb-border);
+  border-radius: var(--tb-radius);
+}
+
+pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--tb-text);
+}
+
+/* Focus ring styling */
+:focus-visible {
+  outline: 2px solid var(--tb-primary);
+  outline-offset: 2px;
+}
+
+/* Selection styling */
+::selection {
+  background: var(--tb-primary-focus);
+  color: var(--tb-text);
+}

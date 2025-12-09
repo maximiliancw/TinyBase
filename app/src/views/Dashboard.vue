@@ -2,8 +2,8 @@
 /**
  * Dashboard View
  * 
- * Overview page showing key metrics and quick links.
- * Uses semantic HTML elements following PicoCSS conventions.
+ * Overview page with key metrics and quick navigation.
+ * Features animated stat cards and refined layout.
  */
 import { onMounted, ref } from 'vue'
 import { useCollectionsStore } from '../stores/collections'
@@ -61,12 +61,14 @@ function dismissNotice() {
     </article>
     
     <header class="page-header">
-      <h1>Dashboard</h1>
-      <p>Welcome to TinyBase Admin</p>
+      <hgroup>
+        <h1>Dashboard</h1>
+        <p>Welcome to TinyBase Admin</p>
+      </hgroup>
     </header>
     
-    <!-- Stats Grid - uses article for cards (Pico's card element) -->
-    <div class="stats-grid">
+    <!-- Stats Grid with stagger animation -->
+    <div class="stats-grid" data-animate="stagger">
       <article class="stat-card">
         <p>{{ stats.collections }}</p>
         <p>Collections</p>
@@ -81,24 +83,58 @@ function dismissNotice() {
       </article>
       <article v-if="authStore.isAdmin" class="stat-card">
         <p>{{ stats.recentCalls }}</p>
-        <p>Total Function Calls</p>
+        <p>Function Calls</p>
       </article>
     </div>
     
     <!-- Quick Actions Card -->
-    <article>
+    <article class="quick-actions">
       <header>
         <h3>Quick Actions</h3>
       </header>
-      <div role="group">
-        <router-link to="/collections" role="button" class="secondary">
-          <span aria-hidden="true">📁</span> View Collections
+      <div class="action-grid">
+        <router-link to="/collections" class="action-item">
+          <span class="action-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+          </span>
+          <span class="action-label">View Collections</span>
+          <span class="action-arrow">→</span>
         </router-link>
-        <router-link to="/functions" role="button" class="secondary">
-          <span aria-hidden="true">⚡</span> View Functions
+        
+        <router-link to="/functions" class="action-item">
+          <span class="action-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+          </span>
+          <span class="action-label">View Functions</span>
+          <span class="action-arrow">→</span>
         </router-link>
-        <router-link v-if="authStore.isAdmin" to="/users" role="button" class="secondary">
-          <span aria-hidden="true">👥</span> Manage Users
+        
+        <router-link v-if="authStore.isAdmin" to="/users" class="action-item">
+          <span class="action-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </span>
+          <span class="action-label">Manage Users</span>
+          <span class="action-arrow">→</span>
+        </router-link>
+        
+        <router-link v-if="authStore.isAdmin" to="/settings" class="action-item">
+          <span class="action-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </span>
+          <span class="action-label">Settings</span>
+          <span class="action-arrow">→</span>
         </router-link>
       </div>
     </article>
@@ -134,11 +170,92 @@ function dismissNotice() {
                 {{ collection.name }}
               </router-link>
             </td>
-            <td>{{ collection.label }}</td>
-            <td>{{ collection.schema?.fields?.length || 0 }}</td>
+            <td class="text-secondary">{{ collection.label }}</td>
+            <td><mark data-status="neutral">{{ collection.schema?.fields?.length || 0 }} fields</mark></td>
           </tr>
         </tbody>
       </table>
     </article>
   </div>
 </template>
+
+<style scoped>
+/* Quick actions grid */
+.quick-actions {
+  margin-bottom: var(--tb-spacing-lg);
+}
+
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--tb-spacing-md);
+}
+
+.action-item {
+  display: flex;
+  align-items: center;
+  gap: var(--tb-spacing-md);
+  padding: var(--tb-spacing-md);
+  background: var(--tb-surface-1);
+  border: 1px solid var(--tb-border);
+  border-radius: var(--tb-radius);
+  color: var(--tb-text);
+  text-decoration: none;
+  transition: 
+    background var(--tb-transition-fast),
+    border-color var(--tb-transition-fast),
+    transform var(--tb-transition-fast);
+}
+
+.action-item:hover {
+  background: var(--tb-surface-2);
+  border-color: var(--tb-border-strong);
+  transform: translateY(-2px);
+}
+
+.action-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  background: var(--tb-primary-focus);
+  border-radius: var(--tb-radius);
+  color: var(--tb-primary);
+  flex-shrink: 0;
+}
+
+.action-icon svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.action-label {
+  flex: 1;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.action-arrow {
+  color: var(--tb-text-muted);
+  transition: transform var(--tb-transition-fast);
+}
+
+.action-item:hover .action-arrow {
+  transform: translateX(4px);
+  color: var(--tb-primary);
+}
+
+/* Page header layout */
+.page-header hgroup {
+  margin: 0;
+}
+
+.page-header hgroup h1 {
+  margin-bottom: var(--tb-spacing-xs);
+}
+
+.page-header hgroup p {
+  margin: 0;
+}
+</style>

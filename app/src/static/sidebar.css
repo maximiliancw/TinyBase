@@ -1,11 +1,11 @@
 /**
  * Sidebar Navigation
  * 
- * Uses semantic <aside> and <nav> elements.
- * See: https://picocss.com/docs/nav
+ * Premium sidebar with refined styling, smooth animations,
+ * and visual hierarchy.
  */
 
-/* Sidebar container - uses <aside> */
+/* Sidebar container */
 aside.sidebar {
   width: var(--tb-sidebar-width);
   background: var(--tb-bg-card);
@@ -14,71 +14,209 @@ aside.sidebar {
   position: fixed;
   height: 100vh;
   overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 50;
+  
+  /* Subtle inner shadow for depth */
+  box-shadow: inset -1px 0 0 var(--tb-surface-1);
+}
+
+/* Custom scrollbar for sidebar */
+aside.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+aside.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+aside.sidebar::-webkit-scrollbar-thumb {
+  background: var(--tb-border);
+  border-radius: 3px;
+}
+
+aside.sidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--tb-border-strong);
 }
 
 /* Brand/logo area */
-aside.sidebar > header h1 {
-  font-size: 1.5rem;
-  margin: 0;
-  color: var(--tb-primary);
-  font-weight: 700;
-  letter-spacing: -0.025em;
+aside.sidebar > header {
+  display: flex;
+  align-items: center;
+  gap: var(--tb-spacing-sm);
+  padding-bottom: var(--tb-spacing-lg);
+  margin-bottom: var(--tb-spacing-md);
+  border-bottom: 1px solid var(--tb-border-subtle);
 }
 
-/* Navigation - using Pico's nav styling as base */
+aside.sidebar > header .logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  background: var(--tb-gradient-primary);
+  border-radius: var(--tb-radius);
+  box-shadow: 0 2px 8px rgba(167, 139, 250, 0.3);
+}
+
+aside.sidebar > header .logo svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: white;
+}
+
+aside.sidebar > header h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+  background: var(--tb-gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
+}
+
+/* Navigation sections */
 aside.sidebar nav {
-  margin-top: var(--tb-spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--tb-spacing-xs);
 }
 
 aside.sidebar nav ul {
   list-style: none;
   padding: 0;
   margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 aside.sidebar nav li {
-  margin-bottom: var(--tb-spacing-xs);
+  margin: 0;
 }
 
+/* Navigation links */
 aside.sidebar nav a {
   display: flex;
   align-items: center;
   gap: var(--tb-spacing-sm);
-  padding: var(--tb-spacing-sm) var(--tb-spacing-md);
-  color: var(--pico-muted-color);
+  padding: 0.625rem var(--tb-spacing-md);
+  color: var(--tb-text-secondary);
   text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
   border-radius: var(--tb-radius);
-  transition: all 0.2s ease;
+  transition: 
+    background var(--tb-transition-fast),
+    color var(--tb-transition-fast),
+    transform var(--tb-transition-fast);
 }
 
 aside.sidebar nav a:hover {
-  background: var(--tb-bg-hover);
+  background: var(--tb-surface-2);
   color: var(--tb-text);
 }
 
-/* Active link - Vue Router adds .router-link-active */
+/* Active link */
 aside.sidebar nav a.router-link-active {
-  background: color-mix(in srgb, var(--tb-primary) 30%, transparent);
+  background: var(--tb-primary-focus);
   color: var(--tb-primary);
 }
 
-/* Nav icon (emoji or icon font) */
-aside.sidebar nav a span[aria-hidden] {
-  font-size: 0.875rem;
+aside.sidebar nav a.router-link-active .nav-icon {
+  color: var(--tb-primary);
 }
 
-/* Section divider within sidebar */
+/* Icon styling */
+aside.sidebar nav a .nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--tb-text-muted);
+  transition: color var(--tb-transition-fast);
+  flex-shrink: 0;
+}
+
+aside.sidebar nav a .nav-icon svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+aside.sidebar nav a:hover .nav-icon {
+  color: var(--tb-text-secondary);
+}
+
+/* Section dividers */
 aside.sidebar section {
   margin-top: var(--tb-spacing-lg);
   padding-top: var(--tb-spacing-md);
-  border-top: 1px solid var(--tb-border);
 }
 
+aside.sidebar section:first-child {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+/* Section labels */
 aside.sidebar section > small {
+  display: flex;
+  align-items: center;
+  gap: var(--tb-spacing-xs);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tb-text-muted);
+  padding: 0 var(--tb-spacing-md);
+  margin-bottom: var(--tb-spacing-sm);
+}
+
+/* Footer */
+aside.sidebar > footer {
+  margin-top: auto;
+  padding-top: var(--tb-spacing-lg);
+  border-top: 1px solid var(--tb-border-subtle);
+}
+
+aside.sidebar > footer small {
   display: block;
   font-size: 0.75rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--pico-muted-color);
-  margin-bottom: var(--tb-spacing-sm);
+  line-height: 1.5;
+}
+
+aside.sidebar > footer .user-email {
+  color: var(--tb-text);
+  font-weight: 500;
+}
+
+aside.sidebar > footer mark {
+  margin-top: var(--tb-spacing-xs);
+  display: inline-flex;
+}
+
+/* Logout link styling */
+aside.sidebar nav a[href="#"]:hover {
+  background: var(--tb-error-bg);
+  color: var(--tb-error);
+}
+
+aside.sidebar nav a[href="#"]:hover .nav-icon {
+  color: var(--tb-error);
+}
+
+/* Responsive: hide sidebar on mobile */
+@media (max-width: 768px) {
+  aside.sidebar {
+    transform: translateX(-100%);
+    transition: transform var(--tb-transition-slow);
+    box-shadow: var(--tb-shadow-lg);
+  }
+  
+  aside.sidebar[data-open="true"] {
+    transform: translateX(0);
+  }
 }

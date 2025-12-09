@@ -1,49 +1,88 @@
 /**
  * Component Extensions
  * 
- * Extends PicoCSS's semantic element styling.
- * Uses native HTML elements wherever possible.
- * 
- * Reference: https://picocss.com/docs
+ * Modern, premium component styling that extends PicoCSS.
+ * Features layered depth, subtle animations, and refined aesthetics.
  */
 
 /* ============================================
    ARTICLE (Cards)
-   Pico already styles <article> as cards.
-   https://picocss.com/docs/card
+   Premium card styling with depth and shine
    ============================================ */
 
 article {
-  border-radius: var(--tb-radius-lg);
+  background: var(--tb-bg-card);
   border: 1px solid var(--tb-border);
+  border-radius: var(--tb-radius-lg);
+  box-shadow: var(--tb-shadow-sm);
+  position: relative;
+  overflow: hidden;
+  transition: 
+    border-color var(--tb-transition),
+    box-shadow var(--tb-transition);
 }
 
-/* Article header - first <header> inside article */
+/* Subtle top highlight for depth */
+article::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.06) 50%,
+    transparent 100%
+  );
+}
+
+article:hover {
+  border-color: var(--tb-border-strong);
+}
+
+/* Article header */
 article > header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: var(--pico-spacing);
-  margin-bottom: var(--pico-spacing);
-  border-bottom: 1px solid var(--tb-border);
+  padding: var(--tb-spacing-md) var(--tb-spacing-lg);
+  margin: calc(var(--tb-spacing-lg) * -1);
+  margin-bottom: var(--tb-spacing-lg);
+  background: var(--tb-surface-1);
+  border-bottom: 1px solid var(--tb-border-subtle);
 }
 
 article > header h3,
 article > header h4 {
   margin: 0;
-  font-size: 1.125rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--tb-text);
 }
 
-/* Article footer - last <footer> inside article */
+/* Article footer */
 article > footer {
-  padding-top: var(--pico-spacing);
-  margin-top: var(--pico-spacing);
-  border-top: 1px solid var(--tb-border);
+  padding-top: var(--tb-spacing-md);
+  margin-top: var(--tb-spacing-md);
+  border-top: 1px solid var(--tb-border-subtle);
 }
 
-/* Stat card variant - article with stat-card class */
+/* Stat card variant */
 article.stat-card {
   padding: var(--tb-spacing-lg);
+  background: linear-gradient(
+    135deg,
+    var(--tb-bg-card) 0%,
+    var(--tb-bg-elevated) 100%
+  );
+  transition: transform var(--tb-transition), box-shadow var(--tb-transition);
+}
+
+article.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--tb-shadow);
 }
 
 article.stat-card p {
@@ -51,71 +90,167 @@ article.stat-card p {
 }
 
 article.stat-card p:first-child {
-  font-size: 2rem;
+  font-size: 2.5rem;
   font-weight: 700;
-  color: var(--tb-primary);
+  background: var(--tb-gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.1;
+  margin-bottom: var(--tb-spacing-xs);
 }
 
 article.stat-card p:last-child {
-  font-size: 0.875rem;
-  color: var(--pico-muted-color);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--tb-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 
 /* ============================================
    BUTTONS
-   Pico styles <button> and <a role="button">.
-   https://picocss.com/docs/button
+   Premium buttons with depth and micro-animations
    ============================================ */
 
-/* Smaller button variant */
+button,
+[role="button"] {
+  font-family: var(--tb-font-sans);
+  font-weight: 500;
+  letter-spacing: 0;
+  border-radius: var(--tb-radius);
+  transition: 
+    transform var(--tb-transition-fast),
+    box-shadow var(--tb-transition-fast),
+    background var(--tb-transition-fast),
+    border-color var(--tb-transition-fast);
+}
+
+/* Primary button enhancements */
+button:not(.secondary):not(.contrast):not(.outline),
+[role="button"]:not(.secondary):not(.contrast):not(.outline) {
+  background: var(--tb-gradient-primary);
+  border: none;
+  box-shadow: 0 2px 8px rgba(167, 139, 250, 0.25);
+}
+
+button:not(.secondary):not(.contrast):not(.outline):hover,
+[role="button"]:not(.secondary):not(.contrast):not(.outline):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(167, 139, 250, 0.35);
+}
+
+button:not(.secondary):not(.contrast):not(.outline):active,
+[role="button"]:not(.secondary):not(.contrast):not(.outline):active {
+  transform: translateY(0);
+}
+
+/* Secondary button */
+button.secondary,
+[role="button"].secondary {
+  background: var(--tb-bg-hover);
+  border: 1px solid var(--tb-border);
+  color: var(--tb-text);
+}
+
+button.secondary:hover,
+[role="button"].secondary:hover {
+  background: var(--tb-bg-active);
+  border-color: var(--tb-border-strong);
+}
+
+/* Small button variant */
 button.small,
 [role="button"].small {
-  padding: 0.25rem 0.75rem;
+  padding: 0.375rem 0.875rem;
   font-size: 0.8125rem;
 }
 
-/* Danger button - use contrast class + override */
+/* Danger/Contrast button */
+button.contrast,
 button.danger,
+[role="button"].contrast,
 [role="button"].danger {
-  --pico-contrast: var(--tb-error);
-  --pico-contrast-hover: #e53e3e;
+  background: var(--tb-error-bg);
+  border: 1px solid transparent;
+  color: var(--tb-error);
 }
 
-/* Button with icon */
-button > span[aria-hidden],
-[role="button"] > span[aria-hidden] {
+button.contrast:hover,
+button.danger:hover,
+[role="button"].contrast:hover,
+[role="button"].danger:hover {
+  background: rgba(248, 113, 113, 0.2);
+  border-color: var(--tb-error);
+}
+
+/* Button icon */
+button > svg,
+[role="button"] > svg {
+  width: 1em;
+  height: 1em;
   margin-right: var(--tb-spacing-xs);
+  vertical-align: -0.125em;
 }
 
 
 /* ============================================
    BUTTON GROUPS
-   Use <div role="group"> for grouped buttons.
-   https://picocss.com/docs/group
    ============================================ */
 
 [role="group"] {
+  display: inline-flex;
   gap: var(--tb-spacing-sm);
 }
 
 
 /* ============================================
    TABLES
-   Pico styles <table> automatically.
-   https://picocss.com/docs/table
+   Clean, refined table styling
    ============================================ */
 
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
 table th {
+  font-family: var(--tb-font-sans);
   font-weight: 600;
-  color: var(--pico-muted-color);
-  font-size: 0.875rem;
+  font-size: 0.75rem;
+  color: var(--tb-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.025em;
+  letter-spacing: 0.05em;
+  padding: var(--tb-spacing-sm) var(--tb-spacing-md);
+  background: var(--tb-surface-1);
+  border-bottom: 1px solid var(--tb-border);
+}
+
+table th:first-child {
+  border-top-left-radius: var(--tb-radius);
+}
+
+table th:last-child {
+  border-top-right-radius: var(--tb-radius);
+}
+
+table td {
+  padding: var(--tb-spacing-md);
+  border-bottom: 1px solid var(--tb-border-subtle);
+  vertical-align: middle;
+}
+
+table tbody tr {
+  transition: background var(--tb-transition-fast);
 }
 
 table tbody tr:hover {
-  background: var(--tb-bg-hover);
+  background: var(--tb-surface-2);
+}
+
+table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 /* Clickable row styling */
@@ -123,53 +258,70 @@ table tbody tr[data-clickable] {
   cursor: pointer;
 }
 
+/* Table links */
+table a {
+  color: var(--tb-primary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color var(--tb-transition-fast);
+}
+
+table a:hover {
+  color: var(--tb-primary-hover);
+}
+
 
 /* ============================================
    BADGES / TAGS
-   Use <mark> or <small> with data attributes.
-   https://picocss.com/docs (no native badge)
+   Modern pill badges with subtle backgrounds
    ============================================ */
 
 mark[data-status] {
   display: inline-flex;
   align-items: center;
-  padding: 0.125rem 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  border-radius: var(--tb-radius);
+  padding: 0.25rem 0.625rem;
+  font-family: var(--tb-font-sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  border-radius: 9999px;
   text-transform: uppercase;
-  letter-spacing: 0.025em;
+  letter-spacing: 0.03em;
+  border: 1px solid transparent;
 }
 
 mark[data-status="success"] {
-  background: rgba(72, 187, 120, 0.2);
+  background: var(--tb-success-bg);
   color: var(--tb-success);
+  border-color: rgba(52, 211, 153, 0.2);
 }
 
 mark[data-status="warning"] {
-  background: rgba(246, 173, 85, 0.2);
+  background: var(--tb-warning-bg);
   color: var(--tb-warning);
+  border-color: rgba(251, 191, 36, 0.2);
 }
 
 mark[data-status="error"] {
-  background: rgba(252, 129, 129, 0.2);
+  background: var(--tb-error-bg);
   color: var(--tb-error);
+  border-color: rgba(248, 113, 113, 0.2);
 }
 
 mark[data-status="info"] {
-  background: rgba(99, 179, 237, 0.2);
+  background: var(--tb-info-bg);
   color: var(--tb-info);
+  border-color: rgba(96, 165, 250, 0.2);
 }
 
 mark[data-status="neutral"] {
-  background: var(--tb-border);
-  color: var(--pico-muted-color);
+  background: var(--tb-surface-3);
+  color: var(--tb-text-secondary);
+  border-color: var(--tb-border);
 }
 
 
 /* ============================================
    NOTICES / ALERTS
-   Article-based notice styling.
    ============================================ */
 
 article.notice {
@@ -177,6 +329,7 @@ article.notice {
   align-items: center;
   justify-content: space-between;
   gap: var(--tb-spacing-md);
+  padding: var(--tb-spacing-md) var(--tb-spacing-lg);
 }
 
 article.notice .notice-content {
@@ -186,12 +339,12 @@ article.notice .notice-content {
 article.notice .notice-content p {
   margin: var(--tb-spacing-xs) 0 0 0;
   font-size: 0.875rem;
-  opacity: 0.9;
+  color: var(--tb-text-secondary);
 }
 
 article[data-status="success"] {
-  background: rgba(72, 187, 120, 0.1);
-  border-color: var(--tb-success);
+  background: var(--tb-success-bg);
+  border-color: rgba(52, 211, 153, 0.3);
 }
 
 article[data-status="success"] strong {
@@ -199,8 +352,8 @@ article[data-status="success"] strong {
 }
 
 article[data-status="warning"] {
-  background: rgba(246, 173, 85, 0.1);
-  border-color: var(--tb-warning);
+  background: var(--tb-warning-bg);
+  border-color: rgba(251, 191, 36, 0.3);
 }
 
 article[data-status="warning"] strong {
@@ -208,8 +361,8 @@ article[data-status="warning"] strong {
 }
 
 article[data-status="error"] {
-  background: rgba(252, 129, 129, 0.1);
-  border-color: var(--tb-error);
+  background: var(--tb-error-bg);
+  border-color: rgba(248, 113, 113, 0.3);
 }
 
 article[data-status="error"] strong {
@@ -217,8 +370,8 @@ article[data-status="error"] strong {
 }
 
 article[data-status="info"] {
-  background: rgba(99, 179, 237, 0.1);
-  border-color: var(--tb-info);
+  background: var(--tb-info-bg);
+  border-color: rgba(96, 165, 250, 0.3);
 }
 
 article[data-status="info"] strong {
@@ -227,22 +380,111 @@ article[data-status="info"] strong {
 
 
 /* ============================================
-   LOADING STATES
-   Use aria-busy="true" on elements.
-   https://picocss.com/docs/loading
+   FORMS
+   Enhanced form styling
    ============================================ */
 
-/* Pico handles aria-busy on buttons automatically.
-   Custom spinner for standalone use: */
+input, select, textarea {
+  font-family: var(--tb-font-sans);
+  background: var(--tb-bg-elevated) !important;
+  border: 1px solid var(--tb-border) !important;
+  border-radius: var(--tb-radius) !important;
+  transition: 
+    border-color var(--tb-transition-fast),
+    box-shadow var(--tb-transition-fast) !important;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--tb-primary) !important;
+  box-shadow: 0 0 0 3px var(--tb-primary-focus) !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--tb-text-muted);
+}
+
+label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--tb-text-secondary);
+}
+
+label > small {
+  display: block;
+  margin-top: var(--tb-spacing-xs);
+  font-weight: 400;
+  color: var(--tb-text-muted);
+}
+
+/* Switch styling */
+input[role="switch"] {
+  height: 1.5rem;
+}
+
+
+/* ============================================
+   DIALOGS / MODALS
+   Premium modal styling
+   ============================================ */
+
+dialog {
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+dialog > article {
+  max-width: 480px;
+  margin: auto;
+  animation: dialogSlideIn 0.2s ease-out;
+}
+
+@keyframes dialogSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+dialog article > header {
+  margin: calc(var(--tb-spacing-lg) * -1);
+  margin-bottom: var(--tb-spacing-lg);
+  padding: var(--tb-spacing-lg);
+  background: transparent;
+  border-bottom: 1px solid var(--tb-border-subtle);
+}
+
+dialog article > header h3 {
+  font-size: 1.125rem;
+}
+
+dialog article footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--tb-spacing-sm);
+  padding-top: var(--tb-spacing-lg);
+  margin-top: var(--tb-spacing-lg);
+  border-top: 1px solid var(--tb-border-subtle);
+}
+
+
+/* ============================================
+   LOADING STATES
+   ============================================ */
+
 [aria-busy="true"]:not(button):not(input):not(select):not(textarea)::before {
   content: "";
   display: inline-block;
-  width: 1em;
-  height: 1em;
+  width: 1.25em;
+  height: 1.25em;
   border: 2px solid var(--tb-border);
   border-top-color: var(--tb-primary);
   border-radius: 50%;
-  animation: spin 0.6s linear infinite;
+  animation: spin 0.7s linear infinite;
   margin-right: var(--tb-spacing-sm);
   vertical-align: middle;
 }
@@ -254,21 +496,36 @@ article[data-status="info"] strong {
 
 /* ============================================
    EMPTY STATES
-   For when content areas have no data.
    ============================================ */
 
 [data-empty] {
   text-align: center;
-  padding: var(--tb-spacing-xl);
-  color: var(--pico-muted-color);
+  padding: var(--tb-spacing-2xl) var(--tb-spacing-lg);
+  color: var(--tb-text-muted);
 }
 
 [data-empty]::before {
   content: attr(data-empty-icon);
-  display: block;
-  font-size: 3rem;
-  margin-bottom: var(--tb-spacing-md);
-  opacity: 0.5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  margin: 0 auto var(--tb-spacing-lg);
+  font-size: 1.75rem;
+  background: var(--tb-surface-2);
+  border: 1px solid var(--tb-border);
+  border-radius: var(--tb-radius-xl);
+}
+
+[data-empty] p {
+  margin: 0;
+}
+
+[data-empty] p:first-of-type {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--tb-text-secondary);
 }
 
 
@@ -277,34 +534,27 @@ article[data-status="info"] strong {
    ============================================ */
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { 
+    opacity: 0; 
+    transform: translateY(8px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
 }
 
 [data-animate="fade-in"] {
-  animation: fadeIn 0.3s ease;
+  animation: fadeIn 0.3s ease-out;
 }
 
-
-/* ============================================
-   CODE / PRE
-   Syntax highlighting compatible styling.
-   ============================================ */
-
-pre {
-  background: var(--tb-bg-dark);
-  border: 1px solid var(--tb-border);
-  border-radius: var(--tb-radius);
+/* Staggered children animation */
+[data-animate="stagger"] > * {
+  animation: fadeIn 0.3s ease-out backwards;
 }
 
-code {
-  background: var(--tb-bg-dark);
-  border-radius: var(--tb-radius);
-  padding: 0.125em 0.375em;
-}
-
-pre code {
-  background: transparent;
-  padding: 0;
-}
-
+[data-animate="stagger"] > *:nth-child(1) { animation-delay: 0ms; }
+[data-animate="stagger"] > *:nth-child(2) { animation-delay: 50ms; }
+[data-animate="stagger"] > *:nth-child(3) { animation-delay: 100ms; }
+[data-animate="stagger"] > *:nth-child(4) { animation-delay: 150ms; }
+[data-animate="stagger"] > *:nth-child(5) { animation-delay: 200ms; }
