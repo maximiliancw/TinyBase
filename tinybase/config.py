@@ -112,6 +112,21 @@ class Settings(BaseSettings):
         ge=1,
         description="Token cleanup interval in scheduler ticks (e.g., 60 = every 60 scheduler intervals)"
     )
+    scheduler_function_timeout_seconds: int = Field(
+        default=1800,
+        ge=1,
+        description="Maximum execution time for scheduled functions in seconds (default: 30 minutes)"
+    )
+    scheduler_max_schedules_per_tick: int = Field(
+        default=100,
+        ge=1,
+        description="Maximum number of schedules to process per scheduler tick"
+    )
+    scheduler_max_concurrent_executions: int = Field(
+        default=10,
+        ge=1,
+        description="Maximum number of schedules to execute concurrently"
+    )
     
     # CORS settings
     cors_allow_origins: list[str] = Field(

@@ -411,6 +411,9 @@ class InstanceSettingsResponse(BaseModel):
     allow_public_registration: bool = Field(description="Allow public registration")
     server_timezone: str = Field(description="Server timezone")
     token_cleanup_interval: int = Field(description="Token cleanup interval in scheduler ticks")
+    scheduler_function_timeout_seconds: int | None = Field(default=None, description="Function execution timeout in seconds")
+    scheduler_max_schedules_per_tick: int | None = Field(default=None, description="Max schedules per tick")
+    scheduler_max_concurrent_executions: int | None = Field(default=None, description="Max concurrent executions")
     storage_enabled: bool = Field(description="File storage enabled")
     storage_endpoint: str | None = Field(default=None, description="S3 endpoint")
     storage_bucket: str | None = Field(default=None, description="S3 bucket name")
@@ -426,6 +429,9 @@ class InstanceSettingsUpdate(BaseModel):
     allow_public_registration: bool | None = Field(default=None)
     server_timezone: str | None = Field(default=None, max_length=50)
     token_cleanup_interval: int | None = Field(default=None, ge=1, description="Token cleanup interval in scheduler ticks")
+    scheduler_function_timeout_seconds: int | None = Field(default=None, ge=1, description="Function execution timeout in seconds")
+    scheduler_max_schedules_per_tick: int | None = Field(default=None, ge=1, description="Max schedules per tick")
+    scheduler_max_concurrent_executions: int | None = Field(default=None, ge=1, description="Max concurrent executions")
     storage_enabled: bool | None = Field(default=None)
     storage_endpoint: str | None = Field(default=None, max_length=500)
     storage_bucket: str | None = Field(default=None, max_length=100)
@@ -441,6 +447,9 @@ def settings_to_response(settings: InstanceSettings) -> InstanceSettingsResponse
         allow_public_registration=settings.allow_public_registration,
         server_timezone=settings.server_timezone,
         token_cleanup_interval=settings.token_cleanup_interval,
+        scheduler_function_timeout_seconds=settings.scheduler_function_timeout_seconds,
+        scheduler_max_schedules_per_tick=settings.scheduler_max_schedules_per_tick,
+        scheduler_max_concurrent_executions=settings.scheduler_max_concurrent_executions,
         storage_enabled=settings.storage_enabled,
         storage_endpoint=settings.storage_endpoint,
         storage_bucket=settings.storage_bucket,
@@ -455,11 +464,20 @@ def get_or_create_settings(session: DbSession) -> InstanceSettings:
     
     settings = session.get(InstanceSettings, 1)
     if settings is None:
-        # Initialize with default from config if available
+        # Initialize with defaults from config if available
         config = app_settings()
         settings = InstanceSettings(
             id=1,
             token_cleanup_interval=getattr(config, "scheduler_token_cleanup_interval", 60),
+            scheduler_function_timeout_seconds=getattr(
+                config, "scheduler_function_timeout_seconds", None
+            ),
+            scheduler_max_schedules_per_tick=getattr(
+                config, "scheduler_max_schedules_per_tick", None
+            ),
+            scheduler_max_concurrent_executions=getattr(
+                config, "scheduler_max_concurrent_executions", None
+            ),
         )
         session.add(settings)
         session.commit()
@@ -519,6 +537,27 @@ def update_settings(
                 detail="token_cleanup_interval must be at least 1",
             )
         settings.token_cleanup_interval = request.token_cleanup_interval
+    if request.scheduler_function_timeout_seconds is not None:
+        if request.scheduler_function_timeout_seconds < 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="scheduler_function_timeout_seconds must be at least 1",
+            )
+        settings.scheduler_function_timeout_seconds = request.scheduler_function_timeout_seconds
+    if request.scheduler_max_schedules_per_tick is not None:
+        if request.scheduler_max_schedules_per_tick < 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="scheduler_max_schedules_per_tick must be at least 1",
+            )
+        settings.scheduler_max_schedules_per_tick = request.scheduler_max_schedules_per_tick
+    if request.scheduler_max_concurrent_executions is not None:
+        if request.scheduler_max_concurrent_executions < 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="scheduler_max_concurrent_executions must be at least 1",
+            )
+        settings.scheduler_max_concurrent_executions = request.scheduler_max_concurrent_executions
     if request.storage_enabled is not None:
         settings.storage_enabled = request.storage_enabled
     if request.storage_endpoint is not None:

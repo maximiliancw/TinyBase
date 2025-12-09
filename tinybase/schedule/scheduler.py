@@ -6,8 +6,10 @@ when their next_run_at time is reached.
 """
 
 import asyncio
+import concurrent.futures
 import logging
 from datetime import datetime
+from uuid import UUID
 
 from sqlmodel import Session, select
 
@@ -22,6 +24,11 @@ from .utils import parse_schedule_config
 
 logger = logging.getLogger(__name__)
 
+# Default values (used as fallback if not configured)
+DEFAULT_FUNCTION_TIMEOUT_SECONDS = 1800
+DEFAULT_MAX_SCHEDULES_PER_TICK = 100
+DEFAULT_MAX_CONCURRENT_EXECUTIONS = 10
+
 
 class Scheduler:
     """
@@ -32,6 +39,13 @@ class Scheduler:
     the associated function is executed and the schedule is updated.
     
     Also handles periodic cleanup tasks like removing expired tokens.
+    
+    Features:
+    - Concurrent execution of schedules (with limits)
+    - Timeout protection for long-running functions
+    - Cached configuration to reduce database queries
+    - Error isolation between schedules
+    - Performance metrics and logging
     """
     
     def __init__(self) -> None:
@@ -39,6 +53,28 @@ class Scheduler:
         self._running = False
         self._task: asyncio.Task | None = None
         self._tick_count = 0
+        # Cache for settings (refreshed periodically)
+        self._cached_cleanup_interval: int | None = None
+        self._cached_function_timeout: int | None = None
+        self._cached_max_schedules_per_tick: int | None = None
+        self._cached_max_concurrent_executions: int | None = None
+        self._settings_cache_ticks = 0
+        self._settings_cache_ttl = 60  # Refresh every 60 ticks
+        # Semaphore to limit concurrent executions (will be updated when settings change)
+        # Initialize with default, will be updated on first settings load
+        self._execution_semaphore = asyncio.Semaphore(DEFAULT_MAX_CONCURRENT_EXECUTIONS)
+        # Thread pool for CPU-intensive operations (will be recreated if max_concurrent changes)
+        self._executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=DEFAULT_MAX_CONCURRENT_EXECUTIONS,
+            thread_name_prefix="scheduler-exec"
+        )
+        # Performance metrics
+        self._metrics = {
+            "total_ticks": 0,
+            "total_schedules_executed": 0,
+            "total_errors": 0,
+            "total_timeouts": 0,
+        }
     
     async def start(self) -> None:
         """Start the scheduler background task."""
@@ -61,6 +97,9 @@ class Scheduler:
                 pass
             self._task = None
         
+        # Shutdown thread pool
+        self._executor.shutdown(wait=True, timeout=30)
+        
         logger.info("Scheduler stopped")
     
     async def _scheduler_loop(self) -> None:
@@ -73,34 +112,146 @@ class Scheduler:
         interval = settings().scheduler_interval_seconds
         
         while self._running:
+            loop_start = utcnow()
             try:
                 await self._process_due_schedules()
                 
                 # Periodic token cleanup
-                self._tick_count += 1
-                # Get token cleanup interval from instance settings
+                # Use modulo to prevent overflow (reset every 1M ticks)
+                self._tick_count = (self._tick_count + 1) % 1_000_000
+                self._metrics["total_ticks"] += 1
+                
+                # Get token cleanup interval from instance settings (cached)
                 cleanup_interval = self._get_token_cleanup_interval()
-                if self._tick_count >= cleanup_interval:
-                    self._tick_count = 0
+                if self._tick_count % cleanup_interval == 0:
                     await self._run_maintenance()
                     
             except Exception as e:
                 logger.exception(f"Error in scheduler loop: {e}")
+                self._metrics["total_errors"] += 1
             
-            await asyncio.sleep(interval)
+            # Calculate sleep time to maintain consistent interval
+            # Account for processing time to keep ticks on schedule
+            elapsed = (utcnow() - loop_start).total_seconds()
+            sleep_time = max(0, interval - elapsed)
+            if sleep_time > 0:
+                await asyncio.sleep(sleep_time)
+            elif elapsed > interval * 2:
+                # Warn if we're falling behind significantly
+                logger.warning(
+                    f"Scheduler tick took {elapsed:.2f}s (interval: {interval}s). "
+                    "Consider increasing scheduler_interval_seconds or reducing load."
+                )
+    
+    def _refresh_settings_cache(self) -> None:
+        """
+        Refresh cached scheduler settings from instance settings or config.
+        
+        Caches all scheduler-related settings and refreshes them periodically
+        to reduce database queries. Also updates semaphore and executor if needed.
+        """
+        # Refresh cache periodically
+        if (
+            self._cached_cleanup_interval is None
+            or self._settings_cache_ticks >= self._settings_cache_ttl
+        ):
+            try:
+                engine = get_engine()
+                with Session(engine) as session:
+                    instance_settings = session.get(InstanceSettings, 1)
+                    config = settings()
+                    
+                    # Token cleanup interval
+                    if instance_settings and instance_settings.token_cleanup_interval:
+                        self._cached_cleanup_interval = instance_settings.token_cleanup_interval
+                    else:
+                        self._cached_cleanup_interval = getattr(
+                            config, "scheduler_token_cleanup_interval", 60
+                        )
+                    
+                    # Function timeout
+                    if instance_settings and instance_settings.scheduler_function_timeout_seconds:
+                        self._cached_function_timeout = instance_settings.scheduler_function_timeout_seconds
+                    else:
+                        self._cached_function_timeout = getattr(
+                            config, "scheduler_function_timeout_seconds", DEFAULT_FUNCTION_TIMEOUT_SECONDS
+                        )
+                    
+                    # Max schedules per tick
+                    if instance_settings and instance_settings.scheduler_max_schedules_per_tick:
+                        self._cached_max_schedules_per_tick = instance_settings.scheduler_max_schedules_per_tick
+                    else:
+                        self._cached_max_schedules_per_tick = getattr(
+                            config, "scheduler_max_schedules_per_tick", DEFAULT_MAX_SCHEDULES_PER_TICK
+                        )
+                    
+                    # Max concurrent executions
+                    new_max_concurrent = None
+                    if instance_settings and instance_settings.scheduler_max_concurrent_executions:
+                        new_max_concurrent = instance_settings.scheduler_max_concurrent_executions
+                    else:
+                        new_max_concurrent = getattr(
+                            config, "scheduler_max_concurrent_executions", DEFAULT_MAX_CONCURRENT_EXECUTIONS
+                        )
+                    
+                    # Update semaphore and executor if max_concurrent changed
+                    if self._cached_max_concurrent_executions != new_max_concurrent:
+                        logger.info(
+                            f"Updating max concurrent executions from "
+                            f"{self._cached_max_concurrent_executions} to {new_max_concurrent}"
+                        )
+                        # Shutdown old executor
+                        self._executor.shutdown(wait=False)
+                        # Create new semaphore and executor
+                        self._execution_semaphore = asyncio.Semaphore(new_max_concurrent)
+                        self._executor = concurrent.futures.ThreadPoolExecutor(
+                            max_workers=new_max_concurrent,
+                            thread_name_prefix="scheduler-exec"
+                        )
+                    
+                    self._cached_max_concurrent_executions = new_max_concurrent
+                    self._settings_cache_ticks = 0
+                    
+            except Exception as e:
+                logger.warning(f"Failed to refresh scheduler settings: {e}")
+                # Use fallback if query fails
+                if self._cached_cleanup_interval is None:
+                    config = settings()
+                    self._cached_cleanup_interval = getattr(
+                        config, "scheduler_token_cleanup_interval", 60
+                    )
+                    self._cached_function_timeout = getattr(
+                        config, "scheduler_function_timeout_seconds", DEFAULT_FUNCTION_TIMEOUT_SECONDS
+                    )
+                    self._cached_max_schedules_per_tick = getattr(
+                        config, "scheduler_max_schedules_per_tick", DEFAULT_MAX_SCHEDULES_PER_TICK
+                    )
+                    self._cached_max_concurrent_executions = getattr(
+                        config, "scheduler_max_concurrent_executions", DEFAULT_MAX_CONCURRENT_EXECUTIONS
+                    )
+                self._settings_cache_ticks = 0
+        else:
+            self._settings_cache_ticks += 1
     
     def _get_token_cleanup_interval(self) -> int:
-        """Get token cleanup interval from instance settings, with fallback to config."""
-        try:
-            engine = get_engine()
-            with Session(engine) as session:
-                instance_settings = session.get(InstanceSettings, 1)
-                if instance_settings and instance_settings.token_cleanup_interval:
-                    return instance_settings.token_cleanup_interval
-        except Exception as e:
-            logger.warning(f"Failed to get token cleanup interval from settings: {e}")
-        # Fallback to config setting, then hardcoded default
-        return getattr(settings(), "scheduler_token_cleanup_interval", 60)
+        """Get token cleanup interval from cache."""
+        self._refresh_settings_cache()
+        return self._cached_cleanup_interval or 60
+    
+    def _get_function_timeout(self) -> int:
+        """Get function timeout from cache."""
+        self._refresh_settings_cache()
+        return self._cached_function_timeout or DEFAULT_FUNCTION_TIMEOUT_SECONDS
+    
+    def _get_max_schedules_per_tick(self) -> int:
+        """Get max schedules per tick from cache."""
+        self._refresh_settings_cache()
+        return self._cached_max_schedules_per_tick or DEFAULT_MAX_SCHEDULES_PER_TICK
+    
+    def _get_max_concurrent_executions(self) -> int:
+        """Get max concurrent executions from cache."""
+        self._refresh_settings_cache()
+        return self._cached_max_concurrent_executions or DEFAULT_MAX_CONCURRENT_EXECUTIONS
     
     async def _run_maintenance(self) -> None:
         """Run periodic maintenance tasks."""
@@ -112,19 +263,90 @@ class Scheduler:
                 logger.exception(f"Error during token cleanup: {e}")
     
     async def _process_due_schedules(self) -> None:
-        """Find and execute all due schedules."""
+        """
+        Find and execute all due schedules.
+        
+        Processes schedules concurrently (with limits) and batches execution
+        to prevent overload. Each schedule is executed in isolation with its
+        own error handling.
+        """
         now = utcnow()
         engine = get_engine()
         
-        with Session(engine) as session:
-            # Find all active schedules that are due
-            statement = select(FunctionSchedule).where(
-                FunctionSchedule.is_active == True,  # noqa: E712
-                FunctionSchedule.next_run_at <= now,
-            )
-            due_schedules = list(session.exec(statement).all())
-            
-            for schedule in due_schedules:
+        try:
+            with Session(engine) as session:
+                # Find all active schedules that are due
+                # Limit to prevent processing too many at once
+                max_per_tick = self._get_max_schedules_per_tick()
+                statement = (
+                    select(FunctionSchedule)
+                    .where(
+                        FunctionSchedule.is_active == True,  # noqa: E712
+                        FunctionSchedule.next_run_at <= now,
+                    )
+                    .limit(max_per_tick)
+                )
+                due_schedules = list(session.exec(statement).all())
+                
+                if not due_schedules:
+                    return
+                
+                logger.debug(f"Processing {len(due_schedules)} due schedule(s)")
+                
+                # Execute schedules concurrently (with semaphore limit)
+                # Each schedule gets its own database session for isolation
+                tasks = [
+                    self._execute_schedule_isolated(schedule.id, now)
+                    for schedule in due_schedules
+                ]
+                
+                # Wait for all executions to complete (or timeout)
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                
+                # Log any exceptions that occurred
+                for i, result in enumerate(results):
+                    if isinstance(result, Exception):
+                        logger.error(
+                            f"Schedule {due_schedules[i].id} execution failed: {result}",
+                            exc_info=result
+                        )
+                        self._metrics["total_errors"] += 1
+                    else:
+                        self._metrics["total_schedules_executed"] += 1
+                        
+        except Exception as e:
+            logger.exception(f"Error querying due schedules: {e}")
+            self._metrics["total_errors"] += 1
+    
+    async def _execute_schedule_isolated(
+        self,
+        schedule_id: UUID,
+        now: datetime
+    ) -> None:
+        """
+        Execute a schedule in isolation with its own database session.
+        
+        This ensures that errors in one schedule don't affect others,
+        and each schedule gets a fresh database connection.
+        
+        Args:
+            schedule_id: The schedule ID to execute
+            now: Current time
+        """
+        # Acquire semaphore to limit concurrent executions
+        async with self._execution_semaphore:
+            engine = get_engine()
+            with Session(engine) as session:
+                # Reload schedule to ensure we have latest data
+                schedule = session.get(FunctionSchedule, schedule_id)
+                if schedule is None:
+                    logger.warning(f"Schedule {schedule_id} not found")
+                    return
+                
+                if not schedule.is_active:
+                    logger.debug(f"Schedule {schedule_id} is not active, skipping")
+                    return
+                
                 await self._execute_schedule(session, schedule, now)
     
     async def _execute_schedule(
@@ -141,7 +363,7 @@ class Scheduler:
             schedule: The schedule to execute
             now: Current time
         """
-        logger.info(f"Executing scheduled function: {schedule.function_name}")
+        logger.info(f"Executing scheduled function: {schedule.function_name} (schedule {schedule.id})")
         
         # Get the function from registry
         registry = get_global_registry()
@@ -157,21 +379,52 @@ class Scheduler:
             session.commit()
             return
         
-        # Execute the function
-        # Note: We run this synchronously in the async context
-        # For CPU-intensive functions, consider using run_in_executor
-        try:
-            execute_function(
-                meta=meta,
-                payload=schedule.input_data or {},
-                session=session,
-                trigger_type=TriggerType.SCHEDULE,
-                trigger_id=schedule.id,
-            )
-        except Exception as e:
-            logger.exception(f"Error executing scheduled function {schedule.function_name}: {e}")
+        # Execute the function with timeout protection
+        # Note: execute_function is synchronous and uses the session directly
+        # We run it in a thread pool to avoid blocking the event loop, but we
+        # must create a new session in the executor thread since SQLAlchemy
+        # sessions are not thread-safe.
+        timeout_seconds = self._get_function_timeout()
         
-        # Update schedule timing
+        def _execute_in_thread() -> None:
+            """Execute function in thread with its own database session."""
+            engine = get_engine()
+            with Session(engine) as exec_session:
+                execute_function(
+                    meta=meta,
+                    payload=schedule.input_data or {},
+                    session=exec_session,
+                    user_id=None,
+                    is_admin=False,
+                    trigger_type=TriggerType.SCHEDULE,
+                    trigger_id=schedule.id,
+                    request=None,
+                )
+        
+        try:
+            # Run function execution in thread pool with timeout
+            loop = asyncio.get_event_loop()
+            try:
+                await asyncio.wait_for(
+                    loop.run_in_executor(self._executor, _execute_in_thread),
+                    timeout=timeout_seconds
+                )
+            except asyncio.TimeoutError:
+                logger.error(
+                    f"Function {schedule.function_name} (schedule {schedule.id}) "
+                    f"exceeded timeout of {timeout_seconds}s"
+                )
+                self._metrics["total_timeouts"] += 1
+                # Schedule will still be updated below, but function execution failed
+                
+        except Exception as e:
+            logger.exception(
+                f"Error executing scheduled function {schedule.function_name} "
+                f"(schedule {schedule.id}): {e}"
+            )
+            self._metrics["total_errors"] += 1
+        
+        # Update schedule timing (always update, even on error)
         schedule.last_run_at = now
         
         # Calculate next run time
@@ -193,8 +446,26 @@ class Scheduler:
             schedule.is_active = False
             schedule.next_run_at = None
         
-        session.add(schedule)
-        session.commit()
+        try:
+            session.add(schedule)
+            session.commit()
+        except Exception as e:
+            logger.exception(f"Error committing schedule {schedule.id} update: {e}")
+            session.rollback()
+            self._metrics["total_errors"] += 1
+    
+    def get_metrics(self) -> dict:
+        """
+        Get scheduler performance metrics.
+        
+        Returns:
+            Dictionary with metrics including:
+            - total_ticks: Total scheduler ticks
+            - total_schedules_executed: Total schedules executed
+            - total_errors: Total errors encountered
+            - total_timeouts: Total function timeouts
+        """
+        return self._metrics.copy()
 
 
 # Global scheduler instance

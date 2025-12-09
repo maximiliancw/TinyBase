@@ -246,6 +246,12 @@ class InstanceSettings(SQLModel, table=True):
     # How often to run token cleanup (every N scheduler intervals)
     # Default: 60 intervals (e.g., 60 * 5s = 5 minutes if scheduler_interval_seconds=5)
     token_cleanup_interval: int = Field(default=60, ge=1, description="Token cleanup interval in scheduler ticks")
+    # Maximum execution time for scheduled functions (in seconds)
+    scheduler_function_timeout_seconds: int | None = Field(default=None, ge=1, description="Function execution timeout in seconds")
+    # Maximum number of schedules to process per tick
+    scheduler_max_schedules_per_tick: int | None = Field(default=None, ge=1, description="Max schedules per tick")
+    # Maximum concurrent schedule executions
+    scheduler_max_concurrent_executions: int | None = Field(default=None, ge=1, description="Max concurrent executions")
     
     # File storage settings (S3-compatible)
     storage_enabled: bool = Field(default=False)

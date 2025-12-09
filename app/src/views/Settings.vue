@@ -16,6 +16,9 @@ interface InstanceSettings {
   allow_public_registration: boolean;
   server_timezone: string;
   token_cleanup_interval: number;
+  scheduler_function_timeout_seconds: number | null;
+  scheduler_max_schedules_per_tick: number | null;
+  scheduler_max_concurrent_executions: number | null;
   storage_enabled: boolean;
   storage_endpoint: string | null;
   storage_bucket: string | null;
@@ -33,6 +36,9 @@ const settings = reactive<InstanceSettings>({
   allow_public_registration: true,
   server_timezone: "UTC",
   token_cleanup_interval: 60,
+  scheduler_function_timeout_seconds: null,
+  scheduler_max_schedules_per_tick: null,
+  scheduler_max_concurrent_executions: null,
   storage_enabled: false,
   storage_endpoint: null,
   storage_bucket: null,
@@ -89,6 +95,9 @@ async function saveSettings() {
       allow_public_registration: settings.allow_public_registration,
       server_timezone: settings.server_timezone,
       token_cleanup_interval: settings.token_cleanup_interval,
+      scheduler_function_timeout_seconds: settings.scheduler_function_timeout_seconds,
+      scheduler_max_schedules_per_tick: settings.scheduler_max_schedules_per_tick,
+      scheduler_max_concurrent_executions: settings.scheduler_max_concurrent_executions,
       storage_enabled: settings.storage_enabled,
       storage_endpoint: settings.storage_endpoint,
       storage_bucket: settings.storage_bucket,
@@ -213,6 +222,51 @@ async function saveSettings() {
             >How often to run token cleanup (in scheduler ticks). For example, if
             scheduler runs every 5 seconds and this is set to 60, cleanup runs
             every 5 minutes (60 × 5s).</small
+          >
+        </label>
+
+        <label for="scheduler_function_timeout_seconds">
+          Function Execution Timeout (seconds)
+          <input
+            id="scheduler_function_timeout_seconds"
+            v-model.number="settings.scheduler_function_timeout_seconds"
+            type="number"
+            min="1"
+            step="1"
+            placeholder="1800"
+          />
+          <small
+            >Maximum execution time for scheduled functions. Leave empty to use default (1800 seconds = 30 minutes).</small
+          >
+        </label>
+
+        <label for="scheduler_max_schedules_per_tick">
+          Max Schedules Per Tick
+          <input
+            id="scheduler_max_schedules_per_tick"
+            v-model.number="settings.scheduler_max_schedules_per_tick"
+            type="number"
+            min="1"
+            step="1"
+            placeholder="100"
+          />
+          <small
+            >Maximum number of schedules to process in each scheduler tick. Leave empty to use default (100).</small
+          >
+        </label>
+
+        <label for="scheduler_max_concurrent_executions">
+          Max Concurrent Executions
+          <input
+            id="scheduler_max_concurrent_executions"
+            v-model.number="settings.scheduler_max_concurrent_executions"
+            type="number"
+            min="1"
+            step="1"
+            placeholder="10"
+          />
+          <small
+            >Maximum number of schedules to execute concurrently. Leave empty to use default (10).</small
           >
         </label>
       </article>

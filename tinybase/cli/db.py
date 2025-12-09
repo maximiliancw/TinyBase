@@ -23,9 +23,23 @@ def db_migrate(
     
     Compares the current models to the database and generates a migration
     script with the detected changes.
+    
+    Note: This command ensures all tables exist before autogenerating
+    to avoid foreign key reflection issues.
     """
     from alembic import command
     from alembic.config import Config
+    
+    # Ensure all tables exist before autogenerate
+    # This prevents errors when reflecting tables with foreign keys
+    # to tables that don't exist yet
+    from tinybase.db.core import create_db_and_tables
+    try:
+        create_db_and_tables()
+    except Exception as e:
+        # If tables already exist or there's an issue, continue anyway
+        # The autogenerate will handle the comparison
+        typer.echo(f"Note: {e}")
     
     alembic_cfg = Config("alembic.ini")
     
