@@ -98,7 +98,14 @@ tinybase/
 │   │   ├── app.py         # Application factory
 │   │   └── routes/        # Route handlers
 │   ├── auth.py            # Authentication logic
-│   ├── cli.py             # CLI commands
+│   ├── cli/                # CLI commands (subpackage)
+│   │   ├── __init__.py
+│   │   ├── main.py
+│   │   ├── functions.py
+│   │   ├── db.py
+│   │   ├── admin.py
+│   │   ├── extensions.py
+│   │   └── utils.py
 │   ├── collections/       # Collections service
 │   ├── config.py          # Configuration management
 │   ├── db/                # Database models
@@ -200,7 +207,12 @@ git push origin feature/my-feature
 
 ### Adding a New CLI Command
 
-1. Add command in `tinybase/cli.py`
+1. Add command to the appropriate module in `tinybase/cli/`:
+   - Core commands → `cli/main.py`
+   - Functions commands → `cli/functions.py`
+   - Database commands → `cli/db.py`
+   - Admin commands → `cli/admin.py`
+   - Extensions commands → `cli/extensions.py`
 2. Follow existing patterns for Typer commands
 3. Add tests
 4. Update CLI documentation
@@ -259,6 +271,7 @@ SELECT * FROM user LIMIT 5;
       "type": "python",
       "request": "launch",
       "module": "tinybase.cli",
+      # Note: tinybase.cli is now a subpackage, but the entry point remains the same
       "args": ["serve", "--reload"],
       "console": "integratedTerminal"
     },

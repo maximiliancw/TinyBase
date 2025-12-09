@@ -45,9 +45,22 @@ graph TB
 
 ### Entry Points
 
-#### CLI (`tinybase/cli.py`)
+#### CLI (`tinybase/cli/`)
 
-The command-line interface built with Typer:
+The command-line interface built with Typer, organized as a subpackage:
+
+```text
+tinybase/cli/
+├── __init__.py      # App assembly and entry point
+├── utils.py         # Shared helper functions
+├── main.py          # Core commands (version, init, serve)
+├── functions.py     # Functions commands (new, deploy)
+├── db.py            # Database commands (migrate, upgrade, etc.)
+├── admin.py         # Admin commands (add)
+└── extensions.py   # Extensions commands (install, list, etc.)
+```
+
+Commands:
 
 - `init` - Initialize TinyBase instance
 - `serve` - Start the server
@@ -375,4 +388,3 @@ class Settings(BaseSettings):
 - [Development Setup](development.md) - Getting started
 - [Testing](testing.md) - Test architecture
 - [Code Style](code-style.md) - Conventions
-
