@@ -65,7 +65,9 @@ app/.pnp.*
 app/.env.local
 app/.env.*.local
 
-# TinyBase runtime
+# TinyBase runtime (auto-generated during local testing)
+tinybase.toml
+alembic.ini
 functions/
 functions.py
 
