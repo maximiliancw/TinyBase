@@ -1,86 +1,86 @@
 <script setup lang="ts">
 /**
  * Settings View
- * 
+ *
  * Admin page for configuring instance settings.
  * Uses semantic HTML elements following PicoCSS conventions.
  */
-import { onMounted, ref, reactive } from 'vue'
-import { api } from '../api'
-import { useAuthStore } from '../stores/auth'
+import { onMounted, ref, reactive } from "vue";
+import { api } from "../api";
+import { useAuthStore } from "../stores/auth";
 
-const authStore = useAuthStore()
+const authStore = useAuthStore();
 
 interface InstanceSettings {
-  instance_name: string
-  allow_public_registration: boolean
-  server_timezone: string
-  storage_enabled: boolean
-  storage_endpoint: string | null
-  storage_bucket: string | null
-  storage_region: string | null
-  updated_at: string
+  instance_name: string;
+  allow_public_registration: boolean;
+  server_timezone: string;
+  storage_enabled: boolean;
+  storage_endpoint: string | null;
+  storage_bucket: string | null;
+  storage_region: string | null;
+  updated_at: string;
 }
 
-const loading = ref(true)
-const saving = ref(false)
-const error = ref<string | null>(null)
-const success = ref<string | null>(null)
+const loading = ref(true);
+const saving = ref(false);
+const error = ref<string | null>(null);
+const success = ref<string | null>(null);
 
 const settings = reactive<InstanceSettings>({
-  instance_name: 'TinyBase',
+  instance_name: "TinyBase",
   allow_public_registration: true,
-  server_timezone: 'UTC',
+  server_timezone: "UTC",
   storage_enabled: false,
   storage_endpoint: null,
   storage_bucket: null,
   storage_region: null,
-  updated_at: '',
-})
+  updated_at: "",
+});
 
 // Storage credentials (not returned by API, only for updates)
-const storageAccessKey = ref('')
-const storageSecretKey = ref('')
+const storageAccessKey = ref("");
+const storageSecretKey = ref("");
 
 // Common timezones for selection
 const commonTimezones = [
-  'UTC',
-  'America/New_York',
-  'America/Chicago',
-  'America/Denver',
-  'America/Los_Angeles',
-  'Europe/London',
-  'Europe/Paris',
-  'Europe/Berlin',
-  'Asia/Tokyo',
-  'Asia/Shanghai',
-  'Asia/Singapore',
-  'Australia/Sydney',
-]
+  "UTC",
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Berlin",
+  "Asia/Tokyo",
+  "Asia/Shanghai",
+  "Asia/Singapore",
+  "Australia/Sydney",
+];
 
 onMounted(async () => {
-  await fetchSettings()
-})
+  await fetchSettings();
+});
 
 async function fetchSettings() {
-  loading.value = true
-  error.value = null
-  
+  loading.value = true;
+  error.value = null;
+
   try {
-    const response = await api.get('/api/admin/settings')
-    Object.assign(settings, response.data)
+    const response = await api.get("/api/admin/settings");
+    Object.assign(settings, response.data);
   } catch (err: any) {
-    error.value = err.response?.data?.detail || 'Failed to load settings'
+    error.value = err.response?.data?.detail || "Failed to load settings";
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 async function saveSettings() {
-  saving.value = true
-  error.value = null
-  success.value = null
-  
+  saving.value = true;
+  error.value = null;
+  success.value = null;
+
   try {
     const payload: Record<string, any> = {
       instance_name: settings.instance_name,
@@ -90,32 +90,34 @@ async function saveSettings() {
       storage_endpoint: settings.storage_endpoint,
       storage_bucket: settings.storage_bucket,
       storage_region: settings.storage_region,
-    }
-    
+    };
+
     // Only include credentials if they're filled in
     if (storageAccessKey.value) {
-      payload.storage_access_key = storageAccessKey.value
+      payload.storage_access_key = storageAccessKey.value;
     }
     if (storageSecretKey.value) {
-      payload.storage_secret_key = storageSecretKey.value
+      payload.storage_secret_key = storageSecretKey.value;
     }
-    
-    const response = await api.patch('/api/admin/settings', payload)
-    Object.assign(settings, response.data)
-    
+
+    const response = await api.patch("/api/admin/settings", payload);
+    Object.assign(settings, response.data);
+
     // Clear credential fields after save
-    storageAccessKey.value = ''
-    storageSecretKey.value = ''
-    
+    storageAccessKey.value = "";
+    storageSecretKey.value = "";
+
     // Update instance name in sidebar
-    await authStore.fetchInstanceInfo()
-    
-    success.value = 'Settings saved successfully'
-    setTimeout(() => { success.value = null }, 3000)
+    await authStore.fetchInstanceInfo();
+
+    success.value = "Settings saved successfully";
+    setTimeout(() => {
+      success.value = null;
+    }, 3000);
   } catch (err: any) {
-    error.value = err.response?.data?.detail || 'Failed to save settings'
+    error.value = err.response?.data?.detail || "Failed to save settings";
   } finally {
-    saving.value = false
+    saving.value = false;
   }
 }
 </script>
@@ -126,19 +128,17 @@ async function saveSettings() {
       <h1>Settings</h1>
       <p>Configure your TinyBase instance</p>
     </header>
-    
+
     <!-- Loading State -->
-    <article v-if="loading" aria-busy="true">
-      Loading settings...
-    </article>
-    
+    <article v-if="loading" aria-busy="true">Loading settings...</article>
+
     <form v-else @submit.prevent="saveSettings">
       <!-- General Settings -->
       <article>
         <header>
           <h3>General</h3>
         </header>
-        
+
         <label for="instance_name">
           Instance Name
           <input
@@ -150,13 +150,13 @@ async function saveSettings() {
           <small>The name displayed in the admin UI and API responses.</small>
         </label>
       </article>
-      
+
       <!-- Authentication Settings -->
       <article>
         <header>
           <h3>Authentication</h3>
         </header>
-        
+
         <label>
           <input
             type="checkbox"
@@ -166,16 +166,17 @@ async function saveSettings() {
           Allow Public Registration
         </label>
         <small class="text-muted">
-          When enabled, anyone can register for an account. When disabled, only admins can create users.
+          When enabled, anyone can register for an account. When disabled, only
+          admins can create users.
         </small>
       </article>
-      
+
       <!-- Timezone Settings -->
       <article>
         <header>
           <h3>Timezone</h3>
         </header>
-        
+
         <label for="server_timezone">
           Server Timezone
           <select id="server_timezone" v-model="settings.server_timezone">
@@ -183,16 +184,19 @@ async function saveSettings() {
               {{ tz }}
             </option>
           </select>
-          <small>Default timezone for scheduled functions. Individual schedules can override this.</small>
+          <small
+            >Default timezone for scheduled functions. Individual schedules can
+            override this.</small
+          >
         </label>
       </article>
-      
+
       <!-- Storage Settings -->
       <article>
         <header>
           <h3>File Storage (S3-compatible)</h3>
         </header>
-        
+
         <label>
           <input
             type="checkbox"
@@ -204,7 +208,7 @@ async function saveSettings() {
         <small class="text-muted mb-3">
           Enable S3-compatible file storage for file uploads.
         </small>
-        
+
         <div v-if="settings.storage_enabled" class="storage-fields">
           <label for="storage_endpoint">
             Endpoint URL
@@ -215,7 +219,7 @@ async function saveSettings() {
               placeholder="https://s3.amazonaws.com or https://your-minio-server:9000"
             />
           </label>
-          
+
           <div class="grid">
             <label for="storage_bucket">
               Bucket Name
@@ -226,7 +230,7 @@ async function saveSettings() {
                 placeholder="my-bucket"
               />
             </label>
-            
+
             <label for="storage_region">
               Region
               <input
@@ -237,7 +241,7 @@ async function saveSettings() {
               />
             </label>
           </div>
-          
+
           <div class="grid">
             <label for="storage_access_key">
               Access Key
@@ -248,7 +252,7 @@ async function saveSettings() {
                 placeholder="Leave empty to keep existing"
               />
             </label>
-            
+
             <label for="storage_secret_key">
               Secret Key
               <input
@@ -261,24 +265,31 @@ async function saveSettings() {
           </div>
         </div>
       </article>
-      
+
       <!-- Status Messages -->
       <ins v-if="success" class="pico-background-green-500">
         {{ success }}
       </ins>
-      
+
       <del v-if="error" class="pico-background-red-500">
         {{ error }}
       </del>
-      
+
       <!-- Save Footer -->
       <article class="save-footer">
-        <small class="text-muted">
-          Last updated: {{ settings.updated_at ? new Date(settings.updated_at).toLocaleString() : 'Never' }}
-        </small>
-        <button type="submit" :aria-busy="saving" :disabled="saving">
-          {{ saving ? '' : 'Save Settings' }}
-        </button>
+        <div class="text-muted">
+          Last updated:
+          {{
+            settings.updated_at
+              ? new Date(settings.updated_at).toLocaleString()
+              : "Never"
+          }}
+        </div>
+        <div>
+          <button type="submit" :aria-busy="saving" :disabled="saving">
+            {{ saving ? "" : "Save Settings" }}
+          </button>
+        </div>
       </article>
     </form>
   </div>
@@ -302,7 +313,8 @@ article {
 }
 
 /* Alert styles using Pico's ins/del for success/error */
-ins, del {
+ins,
+del {
   display: block;
   padding: var(--tb-spacing-sm) var(--tb-spacing-md);
   border-radius: var(--tb-radius);
