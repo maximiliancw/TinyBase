@@ -6,8 +6,10 @@
  * Uses semantic HTML elements following PicoCSS conventions.
  */
 import { onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { useFunctionsStore } from '../stores/functions'
 
+const route = useRoute()
 const functionsStore = useFunctionsStore()
 
 const showCreateModal = ref(false)
@@ -29,6 +31,9 @@ const newSchedule = ref({
 onMounted(async () => {
   await functionsStore.fetchSchedules()
   await functionsStore.fetchFunctions()
+  if (route.query.action === 'create') {
+    showCreateModal.value = true
+  }
 })
 
 function buildSchedulePayload() {

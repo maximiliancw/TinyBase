@@ -6,9 +6,11 @@
  * Uses semantic HTML elements following PicoCSS conventions.
  */
 import { onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { useCollectionsStore } from '../stores/collections'
 import { useAuthStore } from '../stores/auth'
 
+const route = useRoute()
 const collectionsStore = useCollectionsStore()
 const authStore = useAuthStore()
 
@@ -21,6 +23,9 @@ const newCollection = ref({
 
 onMounted(async () => {
   await collectionsStore.fetchCollections()
+  if (route.query.action === 'create' && authStore.isAdmin) {
+    showCreateModal.value = true
+  }
 })
 
 async function handleCreate() {
