@@ -145,8 +145,8 @@ async function handleLogin() {
   background: var(--tb-gradient-primary);
   border-radius: var(--tb-radius-lg);
   box-shadow: 
-    0 4px 16px rgba(167, 139, 250, 0.3),
-    0 0 32px rgba(167, 139, 250, 0.15);
+    var(--tb-btn-primary-shadow-hover),
+    var(--tb-shadow-glow);
   margin-bottom: var(--tb-spacing-md);
 }
 
@@ -178,7 +178,7 @@ async function handleLogin() {
   align-items: flex-start;
   gap: var(--tb-spacing-md);
   background: var(--tb-info-bg);
-  border: 1px solid rgba(96, 165, 250, 0.25);
+  border: 1px solid var(--tb-info-bg);
   border-radius: var(--tb-radius);
   padding: var(--tb-spacing-md);
   margin-bottom: var(--tb-spacing-xl);
@@ -190,7 +190,7 @@ async function handleLogin() {
   justify-content: center;
   width: 2rem;
   height: 2rem;
-  background: rgba(96, 165, 250, 0.2);
+  background: var(--tb-info-bg);
   border-radius: var(--tb-radius);
   flex-shrink: 0;
 }
@@ -235,7 +235,7 @@ form label {
   gap: var(--tb-spacing-sm);
   padding: var(--tb-spacing-sm) var(--tb-spacing-md);
   background: var(--tb-error-bg);
-  border: 1px solid rgba(248, 113, 113, 0.25);
+  border: 1px solid var(--tb-error-bg);
   border-radius: var(--tb-radius);
   color: var(--tb-error);
   font-size: 0.8125rem;

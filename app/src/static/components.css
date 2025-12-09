@@ -33,7 +33,7 @@ article::before {
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.06) 50%,
+    var(--tb-surface-3) 50%,
     transparent 100%
   );
 }
@@ -132,13 +132,13 @@ button:not(.secondary):not(.contrast):not(.outline),
 [role="button"]:not(.secondary):not(.contrast):not(.outline) {
   background: var(--tb-gradient-primary);
   border: none;
-  box-shadow: 0 2px 8px rgba(167, 139, 250, 0.25);
+  box-shadow: var(--tb-btn-primary-shadow);
 }
 
 button:not(.secondary):not(.contrast):not(.outline):hover,
 [role="button"]:not(.secondary):not(.contrast):not(.outline):hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(167, 139, 250, 0.35);
+  box-shadow: var(--tb-btn-primary-shadow-hover);
 }
 
 button:not(.secondary):not(.contrast):not(.outline):active,
@@ -181,8 +181,9 @@ button.contrast:hover,
 button.danger:hover,
 [role="button"].contrast:hover,
 [role="button"].danger:hover {
-  background: rgba(248, 113, 113, 0.2);
+  background: var(--tb-error-bg);
   border-color: var(--tb-error);
+  filter: brightness(1.1);
 }
 
 /* Button icon */

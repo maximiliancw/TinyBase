@@ -57,7 +57,7 @@ aside.sidebar > header .logo {
   height: 2.25rem;
   background: var(--tb-gradient-primary);
   border-radius: var(--tb-radius);
-  box-shadow: 0 2px 8px rgba(167, 139, 250, 0.3);
+  box-shadow: var(--tb-btn-primary-shadow);
 }
 
 aside.sidebar > header .logo svg {

@@ -463,7 +463,7 @@ function formatDate(dateStr: string): string {
 }
 
 .warning-box {
-  background: rgba(251, 191, 36, 0.1);
+  background: var(--tb-warning-bg);
   border: 1px solid var(--tb-warning);
   border-radius: var(--tb-radius);
   padding: var(--tb-spacing-lg);
@@ -494,8 +494,9 @@ button.danger,
 
 button.danger:hover,
 .button.danger:hover {
-  --pico-background-color: #dc2626;
-  --pico-border-color: #dc2626;
+  --pico-background-color: var(--tb-error);
+  --pico-border-color: var(--tb-error);
+  filter: brightness(0.9);
 }
 
 button.outline.danger {
@@ -520,13 +521,13 @@ del.alert-error {
 }
 
 ins.alert-success {
-  background: rgba(34, 197, 94, 0.15);
+  background: var(--tb-success-bg);
   color: var(--tb-success);
   border: 1px solid var(--tb-success);
 }
 
 del.alert-error {
-  background: rgba(239, 68, 68, 0.15);
+  background: var(--tb-error-bg);
   color: var(--tb-error);
   border: 1px solid var(--tb-error);
 }

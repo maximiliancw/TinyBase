@@ -1,8 +1,9 @@
 /**
  * TinyBase Theme
  * 
- * A modern, premium dark theme inspired by Linear, Vercel, and Railway.
+ * A modern, premium theme inspired by Linear, Vercel, and Railway.
  * Features subtle gradients, refined typography, and layered depth.
+ * Automatically switches between dark and light based on system preference.
  */
 
 /* Import distinctive fonts */
@@ -12,6 +13,37 @@
   /* Typography */
   --tb-font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --tb-font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  
+  /* Spacing scale */
+  --tb-spacing-xs: 0.25rem;
+  --tb-spacing-sm: 0.5rem;
+  --tb-spacing-md: 1rem;
+  --tb-spacing-lg: 1.5rem;
+  --tb-spacing-xl: 2rem;
+  --tb-spacing-2xl: 3rem;
+  
+  /* Border radius */
+  --tb-radius-sm: 0.375rem;
+  --tb-radius: 0.5rem;
+  --tb-radius-lg: 0.75rem;
+  --tb-radius-xl: 1rem;
+  
+  /* Transitions */
+  --tb-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --tb-transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --tb-transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Sidebar */
+  --tb-sidebar-width: 260px;
+  
+  /* Status colors - Consistent across themes */
+  --tb-success: #22c55e;
+  --tb-warning: #f59e0b;
+  --tb-error: #ef4444;
+  --tb-info: #3b82f6;
+
+  /* ===== DARK THEME (Default) ===== */
+  color-scheme: dark;
   
   /* Brand colors - Electric violet with cyan accents */
   --tb-primary: #a78bfa;
@@ -48,29 +80,11 @@
   --tb-text-muted: #71717a;
   --tb-text-heading: #fafafa;
   
-  /* Status colors - Vibrant but refined */
-  --tb-success: #34d399;
-  --tb-success-bg: rgba(52, 211, 153, 0.12);
-  --tb-warning: #fbbf24;
-  --tb-warning-bg: rgba(251, 191, 36, 0.12);
-  --tb-error: #f87171;
-  --tb-error-bg: rgba(248, 113, 113, 0.12);
-  --tb-info: #60a5fa;
-  --tb-info-bg: rgba(96, 165, 250, 0.12);
-  
-  /* Spacing scale */
-  --tb-spacing-xs: 0.25rem;
-  --tb-spacing-sm: 0.5rem;
-  --tb-spacing-md: 1rem;
-  --tb-spacing-lg: 1.5rem;
-  --tb-spacing-xl: 2rem;
-  --tb-spacing-2xl: 3rem;
-  
-  /* Border radius */
-  --tb-radius-sm: 0.375rem;
-  --tb-radius: 0.5rem;
-  --tb-radius-lg: 0.75rem;
-  --tb-radius-xl: 1rem;
+  /* Status background colors */
+  --tb-success-bg: rgba(34, 197, 94, 0.12);
+  --tb-warning-bg: rgba(245, 158, 11, 0.12);
+  --tb-error-bg: rgba(239, 68, 68, 0.12);
+  --tb-info-bg: rgba(59, 130, 246, 0.12);
   
   /* Shadows - Layered depth */
   --tb-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -78,20 +92,88 @@
   --tb-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
   --tb-shadow-glow: 0 0 20px var(--tb-primary-glow);
   
-  /* Transitions */
-  --tb-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --tb-transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-  --tb-transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  /* Button shadows */
+  --tb-btn-primary-shadow: 0 2px 8px rgba(167, 139, 250, 0.25);
+  --tb-btn-primary-shadow-hover: 0 4px 12px rgba(167, 139, 250, 0.35);
   
-  /* Sidebar */
-  --tb-sidebar-width: 260px;
+  /* Ambient glow effects */
+  --tb-ambient-primary: rgba(167, 139, 250, 0.08);
+  --tb-ambient-secondary: rgba(99, 102, 241, 0.05);
+  --tb-ambient-strong: rgba(167, 139, 250, 0.15);
+  --tb-ambient-card: rgba(167, 139, 250, 0.1);
 }
 
 /**
- * Override Pico's CSS variables for our dark theme.
+ * Light theme - Activated when system prefers light mode
  */
-[data-theme="dark"],
-:root:not([data-theme="light"]) {
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    
+    /* Brand colors - Deeper violet for light mode */
+    --tb-primary: #7c3aed;
+    --tb-primary-hover: #6d28d9;
+    --tb-primary-focus: rgba(124, 58, 237, 0.15);
+    --tb-primary-inverse: #ffffff;
+    --tb-primary-glow: rgba(124, 58, 237, 0.2);
+    
+    /* Accent gradient */
+    --tb-gradient-primary: linear-gradient(135deg, #7c3aed 0%, #6366f1 50%, #4f46e5 100%);
+    --tb-gradient-accent: linear-gradient(135deg, #0891b2 0%, #7c3aed 100%);
+    
+    /* Background colors - Clean, warm whites */
+    --tb-bg-base: #fafafa;
+    --tb-bg-dark: #f5f5f5;
+    --tb-bg-card: #ffffff;
+    --tb-bg-elevated: #ffffff;
+    --tb-bg-hover: #f4f4f5;
+    --tb-bg-active: #e4e4e7;
+    
+    /* Surface overlays for depth */
+    --tb-surface-1: rgba(0, 0, 0, 0.02);
+    --tb-surface-2: rgba(0, 0, 0, 0.04);
+    --tb-surface-3: rgba(0, 0, 0, 0.06);
+    
+    /* Border colors */
+    --tb-border: rgba(0, 0, 0, 0.08);
+    --tb-border-subtle: rgba(0, 0, 0, 0.05);
+    --tb-border-strong: rgba(0, 0, 0, 0.12);
+    
+    /* Text colors */
+    --tb-text: #18181b;
+    --tb-text-secondary: #52525b;
+    --tb-text-muted: #71717a;
+    --tb-text-heading: #09090b;
+    
+    /* Status background colors - Slightly stronger for light mode */
+    --tb-success-bg: rgba(34, 197, 94, 0.1);
+    --tb-warning-bg: rgba(245, 158, 11, 0.1);
+    --tb-error-bg: rgba(239, 68, 68, 0.1);
+    --tb-info-bg: rgba(59, 130, 246, 0.1);
+    
+    /* Shadows - Softer for light mode */
+    --tb-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --tb-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+    --tb-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+    --tb-shadow-glow: 0 0 20px var(--tb-primary-glow);
+    
+    /* Button shadows */
+    --tb-btn-primary-shadow: 0 2px 8px rgba(124, 58, 237, 0.2);
+    --tb-btn-primary-shadow-hover: 0 4px 12px rgba(124, 58, 237, 0.3);
+    
+    /* Ambient glow effects - subtle for light mode */
+    --tb-ambient-primary: rgba(124, 58, 237, 0.04);
+    --tb-ambient-secondary: rgba(99, 102, 241, 0.03);
+    --tb-ambient-strong: rgba(124, 58, 237, 0.06);
+    --tb-ambient-card: rgba(124, 58, 237, 0.05);
+  }
+}
+
+/**
+ * Override Pico's CSS variables.
+ * These reference theme-aware variables that automatically adapt to dark/light mode.
+ */
+:root {
   /* Typography */
   --pico-font-family: var(--tb-font-sans);
   --pico-font-size: 1rem;
@@ -143,7 +225,7 @@
   
   /* Contrast button */
   --pico-contrast: var(--tb-error);
-  --pico-contrast-hover: #ef4444;
+  --pico-contrast-hover: #dc2626;
   --pico-contrast-inverse: white;
   
   /* Spacing adjustments */
