@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/maximiliancw/TinyBase/refs/heads/main/app/src/static/img/logo.png?token=GHSAT0AAAAAADP6Q77RHSVPQQLDHKCYQQRC2JYIRSA" alt="TinyBase Logo" width="200" />
+  <img src="logo.png" alt="TinyBase Logo" width="200" />
 </p>
 <p align="center">
   <a href="https://pypi.org/project/tinybase/" target="_blank">
