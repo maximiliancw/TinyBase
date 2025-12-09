@@ -17,6 +17,7 @@ const Functions = () => import('../views/Functions.vue')
 const Schedules = () => import('../views/Schedules.vue')
 const FunctionCalls = () => import('../views/FunctionCalls.vue')
 const Settings = () => import('../views/Settings.vue')
+const Extensions = () => import('../views/Extensions.vue')
 
 const router = createRouter({
   history: createWebHistory('/admin/'),
@@ -73,6 +74,12 @@ const router = createRouter({
       path: '/settings',
       name: 'settings',
       component: Settings,
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
+    {
+      path: '/extensions',
+      name: 'extensions',
+      component: Extensions,
       meta: { requiresAuth: true, requiresAdmin: true },
     },
     // Catch-all redirect to dashboard

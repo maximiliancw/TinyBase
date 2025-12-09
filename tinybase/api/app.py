@@ -16,11 +16,12 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from tinybase.api.routes import admin, auth, collections, files, functions, schedules
+from tinybase.api.routes import admin, auth, collections, extensions, files, functions, schedules
 from tinybase.api.routes.static_admin import mount_admin_ui
 from tinybase.collections.service import load_collections_into_registry
 from tinybase.config import settings
 from tinybase.db.core import create_db_and_tables, get_engine
+from tinybase.extensions import load_enabled_extensions, run_startup_hooks, run_shutdown_hooks
 from tinybase.functions.loader import load_functions_from_settings
 from tinybase.scheduler import start_scheduler, stop_scheduler
 from tinybase.version import __version__
@@ -42,8 +43,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     Application lifespan context manager.
     
     Handles startup and shutdown events:
-    - Startup: Initialize database, load collections, load functions, start scheduler
-    - Shutdown: Stop scheduler
+    - Startup: Initialize database, load collections, load functions, load extensions, start scheduler
+    - Shutdown: Run extension shutdown hooks, stop scheduler
     """
     # Startup
     logger.info("Starting TinyBase server...")
@@ -64,6 +65,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     loaded = load_functions_from_settings()
     logger.info(f"Loaded {loaded} function file(s)")
     
+    # Load extensions
+    logger.info("Loading extensions...")
+    with Session(engine) as session:
+        ext_loaded = load_enabled_extensions(session)
+        logger.info(f"Loaded {ext_loaded} extension(s)")
+    
+    # Run extension startup hooks
+    logger.info("Running extension startup hooks...")
+    await run_startup_hooks()
+    
     # Start scheduler
     logger.info("Starting scheduler...")
     await start_scheduler()
@@ -74,6 +85,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     
     # Shutdown
     logger.info("Shutting down TinyBase server...")
+    
+    # Run extension shutdown hooks
+    logger.info("Running extension shutdown hooks...")
+    await run_shutdown_hooks()
+    
     await stop_scheduler()
     logger.info("TinyBase server stopped")
 
@@ -125,6 +141,7 @@ def create_app() -> FastAPI:
     app.include_router(admin.router, prefix="/api")
     app.include_router(schedules.router, prefix="/api")
     app.include_router(files.router, prefix="/api")
+    app.include_router(extensions.router, prefix="/api")
     
     # Mount admin UI
     admin_mounted = mount_admin_ui(app)

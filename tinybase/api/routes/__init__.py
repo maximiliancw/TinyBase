@@ -7,5 +7,6 @@ Contains all route definitions organized by domain:
 - functions: Function invocation and listing endpoints
 - admin: Admin-only management endpoints
 - schedules: Schedule management endpoints
+- extensions: Extension management endpoints
 """
 

@@ -9,6 +9,7 @@ Defines all core entities:
 - FunctionCall: Execution metadata for function invocations
 - FunctionSchedule: Scheduled function execution configuration
 - InstanceSettings: Singleton for instance-wide configuration
+- Extension: Installed extensions/plugins
 """
 
 from datetime import datetime, timezone
@@ -249,5 +250,46 @@ class InstanceSettings(SQLModel, table=True):
     storage_secret_key: str | None = Field(default=None, max_length=200)
     storage_region: str | None = Field(default=None, max_length=50)
     
+    updated_at: datetime = Field(default_factory=utcnow)
+
+
+# =============================================================================
+# Extension Model
+# =============================================================================
+
+
+class Extension(SQLModel, table=True):
+    """
+    Installed extension/plugin model.
+    
+    Tracks extensions installed from GitHub repositories. Extensions can
+    register functions, add lifecycle hooks, and integrate third-party services.
+    """
+    
+    __tablename__ = "extension"
+    
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    
+    # Extension metadata from extension.toml
+    name: str = Field(index=True, unique=True, max_length=100)
+    version: str = Field(max_length=50)
+    description: str | None = Field(default=None, max_length=500)
+    author: str | None = Field(default=None, max_length=200)
+    
+    # Installation source
+    repo_url: str = Field(max_length=500)
+    
+    # Local installation path (relative to extensions directory)
+    install_path: str = Field(max_length=500)
+    
+    # Entry point module (from extension.toml)
+    entry_point: str = Field(default="main.py", max_length=200)
+    
+    # Whether extension is currently enabled
+    is_enabled: bool = Field(default=True)
+    
+    # Audit fields
+    installed_at: datetime = Field(default_factory=utcnow)
+    installed_by_user_id: UUID | None = Field(default=None, foreign_key="user.id")
     updated_at: datetime = Field(default_factory=utcnow)
 

@@ -132,6 +132,16 @@ class Settings(BaseSettings):
         description="Default admin password for bootstrap"
     )
     
+    # Extensions settings
+    extensions_enabled: bool = Field(
+        default=True,
+        description="Enable the extension system"
+    )
+    extensions_path: str = Field(
+        default="~/.tinybase/extensions",
+        description="Directory path for installed extensions"
+    )
+    
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, v: str) -> str:
