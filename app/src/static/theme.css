@@ -125,6 +125,16 @@
   --pico-form-element-background-color: var(--tb-bg-elevated);
   --pico-form-element-border-color: var(--tb-border);
   --pico-form-element-focus-color: var(--tb-primary);
+  --pico-form-element-disabled-opacity: 0.5;
+  
+  /* Switch/Toggle - PicoCSS native styling */
+  --pico-switch-background-color: var(--tb-bg-active);
+  --pico-switch-checked-background-color: var(--tb-success);
+  --pico-switch-color: var(--tb-text-muted);
+  
+  /* Checkbox & Radio - checked state colors */
+  --pico-form-element-checked-background-color: var(--tb-primary);
+  --pico-form-element-checked-border-color: var(--tb-primary);
   
   /* Secondary button */
   --pico-secondary: var(--tb-bg-hover);
