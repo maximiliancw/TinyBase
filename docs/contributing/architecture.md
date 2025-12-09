@@ -146,13 +146,23 @@ tinybase/collections/
 3. Model used for validation on create/update
 4. Models cached in registry
 
-#### Scheduler (`tinybase/scheduler.py`)
+#### Scheduler (`tinybase/schedule/`)
 
-Background job execution:
+Background job execution and schedule management:
+
+```text
+tinybase/schedule/
+├── __init__.py      # Public exports
+├── scheduler.py     # Background scheduler service
+└── utils.py         # Schedule config models and parsers
+```
+
+Features:
 
 - Polls for due schedules
 - Executes functions with schedule context
 - Updates schedule metadata (last_run, next_run)
+- Schedule configuration models (once, interval, cron)
 
 ```python
 async def run_scheduler():

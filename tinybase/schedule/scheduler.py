@@ -16,8 +16,9 @@ from tinybase.config import settings
 from tinybase.db.core import get_engine
 from tinybase.db.models import FunctionSchedule
 from tinybase.functions.core import execute_function, get_global_registry
-from tinybase.scheduling import parse_schedule_config
 from tinybase.utils import utcnow, TriggerType
+
+from .utils import parse_schedule_config
 
 logger = logging.getLogger(__name__)
 

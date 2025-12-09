@@ -112,7 +112,10 @@ tinybase/
 │   ├── extensions/        # Extension system
 │   ├── functions/         # Function registration
 │   ├── migrations/        # Alembic migrations
-│   ├── scheduler.py       # Job scheduler
+│   ├── schedule/          # Schedule management (subpackage)
+│   │   ├── __init__.py
+│   │   ├── scheduler.py
+│   │   └── utils.py
 │   └── utils.py           # Utilities
 ├── app/                   # Admin UI (Vue)
 │   ├── src/

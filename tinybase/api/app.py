@@ -23,7 +23,7 @@ from tinybase.config import settings
 from tinybase.db.core import create_db_and_tables, get_engine
 from tinybase.extensions import load_enabled_extensions, run_startup_hooks, run_shutdown_hooks
 from tinybase.functions.loader import load_functions_from_settings
-from tinybase.scheduler import start_scheduler, stop_scheduler
+from tinybase.schedule import start_scheduler, stop_scheduler
 from tinybase.version import __version__
 
 # Rate limiter instance

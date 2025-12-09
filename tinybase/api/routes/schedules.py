@@ -14,7 +14,7 @@ from sqlmodel import select
 from tinybase.auth import CurrentAdminUser, DbSession
 from tinybase.db.models import FunctionSchedule, utcnow
 from tinybase.functions.core import get_global_registry
-from tinybase.scheduling import parse_schedule_config
+from tinybase.schedule import parse_schedule_config
 
 router = APIRouter(prefix="/admin/schedules", tags=["Schedules"])
 
