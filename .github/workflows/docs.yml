@@ -39,10 +39,7 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install dependencies
-        run: |
-          uv venv
-          source .venv/bin/activate
-          uv pip install -e ".[docs]"
+        run: uv sync --extra docs
 
       - name: Configure Git
         run: |
@@ -50,9 +47,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Build documentation
-        run: |
-          source .venv/bin/activate
-          mkdocs build --strict
+        run: uv run mkdocs build --strict
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
