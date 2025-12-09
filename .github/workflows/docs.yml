@@ -42,8 +42,7 @@ jobs:
         run: |
           uv venv
           source .venv/bin/activate
-          uv pip install -e ".[dev]"
-          uv pip install mkdocs mkdocs-material mkdocs-minify-plugin "mkdocstrings[python]" mike
+          uv pip install -e ".[docs]"
 
       - name: Configure Git
         run: |
