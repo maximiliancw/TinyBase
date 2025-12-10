@@ -1,0 +1,534 @@
+<script setup lang="ts">
+/**
+ * Files View
+ *
+ * Admin page for managing file storage.
+ * Allows uploading, downloading, and deleting files.
+ */
+import { onMounted, ref } from "vue";
+import { api } from "../api";
+
+interface FileInfo {
+  key: string;
+  filename: string;
+  content_type: string;
+  size: number;
+  uploaded_at: string;
+}
+
+const loading = ref(true);
+const uploading = ref(false);
+const error = ref<string | null>(null);
+const success = ref<string | null>(null);
+const storageEnabled = ref(false);
+
+// Track uploaded files in component state
+const files = ref<FileInfo[]>([]);
+
+// Upload modal
+const showUploadModal = ref(false);
+const uploadFile = ref<File | null>(null);
+const pathPrefix = ref("");
+const uploadError = ref<string | null>(null);
+
+// Manual key input
+const manualKey = ref("");
+const showKeyModal = ref(false);
+
+onMounted(async () => {
+  await checkStorageStatus();
+  // Load files from localStorage if available
+  const stored = localStorage.getItem("tinybase_files");
+  if (stored) {
+    try {
+      files.value = JSON.parse(stored);
+    } catch {
+      // Ignore parse errors
+    }
+  }
+});
+
+async function checkStorageStatus() {
+  loading.value = true;
+  error.value = null;
+
+  try {
+    const response = await api.get("/api/files/status");
+    storageEnabled.value = response.data.enabled;
+  } catch (err: any) {
+    error.value =
+      err.response?.data?.detail || "Failed to check storage status";
+    storageEnabled.value = false;
+  } finally {
+    loading.value = false;
+  }
+}
+
+function openUploadModal() {
+  uploadFile.value = null;
+  pathPrefix.value = "";
+  uploadError.value = null;
+  showUploadModal.value = true;
+}
+
+function handleFileSelect(event: Event) {
+  const target = event.target as HTMLInputElement;
+  if (target.files && target.files.length > 0) {
+    uploadFile.value = target.files[0];
+  }
+}
+
+async function handleUpload() {
+  if (!uploadFile.value) {
+    uploadError.value = "Please select a file";
+    return;
+  }
+
+  uploading.value = true;
+  uploadError.value = null;
+
+  try {
+    const formData = new FormData();
+    formData.append("file", uploadFile.value);
+    if (pathPrefix.value.trim()) {
+      formData.append("path_prefix", pathPrefix.value.trim());
+    }
+
+    const response = await api.post("/api/files/upload", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    const fileInfo: FileInfo = {
+      key: response.data.key,
+      filename: response.data.filename,
+      content_type: response.data.content_type,
+      size: response.data.size,
+      uploaded_at: new Date().toISOString(),
+    };
+
+    // Add to tracked files
+    files.value.unshift(fileInfo);
+    saveFilesToStorage();
+
+    showUploadModal.value = false;
+    success.value = `File "${fileInfo.filename}" uploaded successfully`;
+    setTimeout(() => {
+      success.value = null;
+    }, 3000);
+  } catch (err: any) {
+    uploadError.value = err.response?.data?.detail || "Upload failed";
+  } finally {
+    uploading.value = false;
+  }
+}
+
+function saveFilesToStorage() {
+  // Keep only last 100 files
+  const toStore = files.value.slice(0, 100);
+  localStorage.setItem("tinybase_files", JSON.stringify(toStore));
+}
+
+async function downloadFile(key: string) {
+  try {
+    const response = await api.get(
+      `/api/files/download/${encodeURIComponent(key)}`,
+      {
+        responseType: "blob",
+      }
+    );
+
+    // Extract filename from key
+    const filename = key.split("/").pop() || "download";
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (err: any) {
+    error.value = err.response?.data?.detail || "Download failed";
+    setTimeout(() => {
+      error.value = null;
+    }, 3000);
+  }
+}
+
+async function deleteFile(key: string) {
+  if (!confirm(`Are you sure you want to delete file "${key}"?`)) {
+    return;
+  }
+
+  try {
+    await api.delete(`/api/files/${encodeURIComponent(key)}`);
+
+    // Remove from tracked files
+    files.value = files.value.filter((f) => f.key !== key);
+    saveFilesToStorage();
+
+    success.value = "File deleted successfully";
+    setTimeout(() => {
+      success.value = null;
+    }, 3000);
+  } catch (err: any) {
+    error.value = err.response?.data?.detail || "Delete failed";
+    setTimeout(() => {
+      error.value = null;
+    }, 3000);
+  }
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  if (bytes < 1024 * 1024 * 1024)
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  return (bytes / (1024 * 1024 * 1024)).toFixed(1) + " GB";
+}
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleString();
+}
+
+function openKeyModal() {
+  manualKey.value = "";
+  showKeyModal.value = true;
+}
+
+async function handleKeyAction(action: "download" | "delete") {
+  if (!manualKey.value.trim()) {
+    return;
+  }
+
+  const key = manualKey.value.trim();
+  showKeyModal.value = false;
+
+  if (action === "download") {
+    await downloadFile(key);
+  } else {
+    await deleteFile(key);
+  }
+}
+</script>
+
+<template>
+  <div data-animate="fade-in">
+    <header class="page-header">
+      <hgroup>
+        <h1>Files</h1>
+        <p>Manage files in storage</p>
+      </hgroup>
+      <div class="header-actions">
+        <button class="secondary" @click="openKeyModal">Access by Key</button>
+        <button v-if="storageEnabled" @click="openUploadModal">
+          Upload File
+        </button>
+      </div>
+    </header>
+
+    <!-- Status Messages -->
+    <ins v-if="success" class="alert-success">
+      {{ success }}
+    </ins>
+
+    <del v-if="error" class="alert-error">
+      {{ error }}
+    </del>
+
+    <!-- Loading State -->
+    <article v-if="loading" aria-busy="true">
+      Checking storage status...
+    </article>
+
+    <!-- Storage Not Enabled -->
+    <article v-else-if="!storageEnabled">
+      <div data-empty data-empty-icon="📦">
+        <p>File storage is not enabled</p>
+        <p>
+          <small class="text-muted">
+            Configure file storage in Settings to enable file uploads and
+            management.
+          </small>
+        </p>
+        <router-link to="/settings" role="button" class="mt-3">
+          Go to Settings
+        </router-link>
+      </div>
+    </article>
+
+    <!-- Storage Enabled - File Management -->
+    <div v-else>
+      <!-- Uploaded Files Table -->
+      <article v-if="files.length > 0">
+        <header>
+          <h3>Recent Files</h3>
+          <small class="text-muted">
+            Files you've uploaded in this session. Use "Access by Key" to manage
+            other files.
+          </small>
+        </header>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Filename</th>
+              <th>Key</th>
+              <th>Type</th>
+              <th>Size</th>
+              <th>Uploaded</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="file in files" :key="file.key">
+              <td>
+                <code>{{ file.filename }}</code>
+              </td>
+              <td>
+                <code class="text-muted" style="font-size: 0.75rem">{{
+                  file.key
+                }}</code>
+              </td>
+              <td>
+                <small class="text-muted">{{ file.content_type }}</small>
+              </td>
+              <td>
+                <small class="text-muted">{{
+                  formatFileSize(file.size)
+                }}</small>
+              </td>
+              <td>
+                <small class="text-muted">{{
+                  formatDate(file.uploaded_at)
+                }}</small>
+              </td>
+              <td>
+                <div class="action-buttons">
+                  <button class="small" @click="downloadFile(file.key)">
+                    Download
+                  </button>
+                  <button class="small contrast" @click="deleteFile(file.key)">
+                    Delete
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <!-- Empty State -->
+      <article v-else>
+        <div data-empty data-empty-icon="📁">
+          <p>No files uploaded yet</p>
+          <p>
+            <small class="text-muted">
+              Upload files to get started, or use "Access by Key" to manage
+              existing files.
+            </small>
+          </p>
+          <button @click="openUploadModal" class="mt-3">
+            Upload Your First File
+          </button>
+        </div>
+      </article>
+    </div>
+
+    <!-- Upload Modal -->
+    <dialog :open="showUploadModal">
+      <article>
+        <header>
+          <button
+            aria-label="Close"
+            rel="prev"
+            @click="showUploadModal = false"
+          ></button>
+          <h3>Upload File</h3>
+        </header>
+
+        <form @submit.prevent="handleUpload">
+          <label for="file">
+            File
+            <input
+              id="file"
+              type="file"
+              @change="handleFileSelect"
+              :disabled="uploading"
+              required
+            />
+          </label>
+
+          <label for="path_prefix">
+            Path Prefix (optional)
+            <input
+              id="path_prefix"
+              v-model="pathPrefix"
+              type="text"
+              placeholder="uploads/images/"
+              :disabled="uploading"
+            />
+            <small>
+              Optional prefix to organize files (e.g., "uploads/images/").
+              Trailing slash is optional.
+            </small>
+          </label>
+
+          <small v-if="uploadError" class="text-error">
+            {{ uploadError }}
+          </small>
+
+          <footer class="modal-footer">
+            <button
+              type="button"
+              class="secondary"
+              @click="showUploadModal = false"
+              :disabled="uploading"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              :aria-busy="uploading"
+              :disabled="uploading || !uploadFile"
+            >
+              {{ uploading ? "" : "Upload" }}
+            </button>
+          </footer>
+        </form>
+      </article>
+    </dialog>
+
+    <!-- Access by Key Modal -->
+    <dialog :open="showKeyModal">
+      <article>
+        <header>
+          <button
+            aria-label="Close"
+            rel="prev"
+            @click="showKeyModal = false"
+          ></button>
+          <h3>Access File by Key</h3>
+        </header>
+
+        <p class="text-muted">
+          Enter the storage key (path) of a file to download or delete it.
+        </p>
+
+        <label for="manual_key">
+          Storage Key
+          <input
+            id="manual_key"
+            v-model="manualKey"
+            type="text"
+            placeholder="uploads/images/abc123.jpg"
+            required
+          />
+        </label>
+
+        <footer class="modal-footer">
+          <button type="button" class="secondary" @click="showKeyModal = false">
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="contrast"
+            @click="handleKeyAction('delete')"
+            :disabled="!manualKey.trim()"
+          >
+            Delete
+          </button>
+          <button
+            type="button"
+            @click="handleKeyAction('download')"
+            :disabled="!manualKey.trim()"
+          >
+            Download
+          </button>
+        </footer>
+      </article>
+    </dialog>
+  </div>
+</template>
+
+<style scoped>
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--tb-spacing-lg);
+}
+
+.page-header hgroup {
+  margin: 0;
+}
+
+.page-header hgroup h1 {
+  margin-bottom: var(--tb-spacing-xs);
+}
+
+.page-header hgroup p {
+  margin: 0;
+  color: var(--pico-muted-color);
+}
+
+.header-actions {
+  display: flex;
+  gap: var(--tb-spacing-sm);
+}
+
+.action-buttons {
+  display: flex;
+  gap: var(--tb-spacing-xs);
+}
+
+.action-buttons button {
+  margin: 0;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--tb-spacing-sm);
+  margin-top: var(--tb-spacing-lg);
+}
+
+.modal-footer button {
+  margin: 0;
+}
+
+/* Alert styles */
+ins.alert-success,
+del.alert-error {
+  display: block;
+  padding: var(--tb-spacing-sm) var(--tb-spacing-md);
+  border-radius: var(--tb-radius);
+  margin-bottom: var(--tb-spacing-lg);
+  text-decoration: none;
+}
+
+ins.alert-success {
+  background: var(--tb-success-bg);
+  color: var(--tb-success);
+  border: 1px solid var(--tb-success);
+}
+
+del.alert-error {
+  background: var(--tb-error-bg);
+  color: var(--tb-error);
+  border: 1px solid var(--tb-error);
+}
+
+.mt-3 {
+  margin-top: var(--tb-spacing-lg);
+}
+
+code {
+  font-size: 0.875rem;
+  background: var(--tb-surface-1);
+  padding: 0.125rem 0.25rem;
+  border-radius: var(--tb-radius);
+}
+</style>

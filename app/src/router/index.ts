@@ -1,124 +1,130 @@
 /**
  * Vue Router configuration for TinyBase Admin UI
- * 
+ *
  * Defines routes for all admin pages and handles authentication guards.
  */
 
-import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
+import { createRouter, createWebHistory } from "vue-router";
+import { useAuthStore } from "../stores/auth";
 
 // Lazy-loaded route components
-const Login = () => import('../views/Login.vue')
-const Dashboard = () => import('../views/Dashboard.vue')
-const Collections = () => import('../views/Collections.vue')
-const CollectionDetail = () => import('../views/CollectionDetail.vue')
-const Users = () => import('../views/Users.vue')
-const Functions = () => import('../views/Functions.vue')
-const Schedules = () => import('../views/Schedules.vue')
-const FunctionCalls = () => import('../views/FunctionCalls.vue')
-const Settings = () => import('../views/Settings.vue')
-const Extensions = () => import('../views/Extensions.vue')
+const Login = () => import("../views/Login.vue");
+const Dashboard = () => import("../views/Dashboard.vue");
+const Collections = () => import("../views/Collections.vue");
+const CollectionDetail = () => import("../views/CollectionDetail.vue");
+const Users = () => import("../views/Users.vue");
+const Functions = () => import("../views/Functions.vue");
+const Schedules = () => import("../views/Schedules.vue");
+const FunctionCalls = () => import("../views/FunctionCalls.vue");
+const Settings = () => import("../views/Settings.vue");
+const Extensions = () => import("../views/Extensions.vue");
+const Files = () => import("../views/Files.vue");
 
 const router = createRouter({
-  history: createWebHistory('/admin/'),
+  history: createWebHistory("/admin/"),
   routes: [
     {
-      path: '/login',
-      name: 'login',
+      path: "/login",
+      name: "login",
       component: Login,
       meta: { requiresAuth: false },
     },
     {
-      path: '/',
-      name: 'dashboard',
+      path: "/",
+      name: "dashboard",
       component: Dashboard,
       meta: { requiresAuth: true },
     },
     {
-      path: '/collections',
-      name: 'collections',
+      path: "/collections",
+      name: "collections",
       component: Collections,
       meta: { requiresAuth: true },
     },
     {
-      path: '/collections/:name',
-      name: 'collection-detail',
+      path: "/collections/:name",
+      name: "collection-detail",
       component: CollectionDetail,
       meta: { requiresAuth: true },
     },
     {
-      path: '/users',
-      name: 'users',
+      path: "/users",
+      name: "users",
       component: Users,
       meta: { requiresAuth: true, requiresAdmin: true },
     },
     {
-      path: '/functions',
-      name: 'functions',
+      path: "/functions",
+      name: "functions",
       component: Functions,
       meta: { requiresAuth: true },
     },
     {
-      path: '/schedules',
-      name: 'schedules',
+      path: "/schedules",
+      name: "schedules",
       component: Schedules,
       meta: { requiresAuth: true, requiresAdmin: true },
     },
     {
-      path: '/function-calls',
-      name: 'function-calls',
+      path: "/function-calls",
+      name: "function-calls",
       component: FunctionCalls,
       meta: { requiresAuth: true, requiresAdmin: true },
     },
     {
-      path: '/settings',
-      name: 'settings',
+      path: "/settings",
+      name: "settings",
       component: Settings,
       meta: { requiresAuth: true, requiresAdmin: true },
     },
     {
-      path: '/extensions',
-      name: 'extensions',
+      path: "/extensions",
+      name: "extensions",
       component: Extensions,
       meta: { requiresAuth: true, requiresAdmin: true },
     },
+    {
+      path: "/files",
+      name: "files",
+      component: Files,
+      meta: { requiresAuth: true },
+    },
     // Catch-all redirect to dashboard
     {
-      path: '/:pathMatch(.*)*',
-      redirect: '/',
+      path: "/:pathMatch(.*)*",
+      redirect: "/",
     },
   ],
-})
+});
 
 // Navigation guard for authentication
 router.beforeEach(async (to, _from, next) => {
-  const authStore = useAuthStore()
-  
+  const authStore = useAuthStore();
+
   // Try to load user from stored token
   if (!authStore.user && authStore.token) {
     try {
-      await authStore.fetchUser()
+      await authStore.fetchUser();
     } catch {
-      authStore.logout()
+      authStore.logout();
     }
   }
-  
-  const requiresAuth = to.meta.requiresAuth !== false
-  const requiresAdmin = to.meta.requiresAdmin === true
-  
+
+  const requiresAuth = to.meta.requiresAuth !== false;
+  const requiresAdmin = to.meta.requiresAdmin === true;
+
   if (requiresAuth && !authStore.isAuthenticated) {
     // Redirect to login if not authenticated
-    next({ name: 'login', query: { redirect: to.fullPath } })
+    next({ name: "login", query: { redirect: to.fullPath } });
   } else if (requiresAdmin && !authStore.isAdmin) {
     // Redirect to dashboard if not admin
-    next({ name: 'dashboard' })
-  } else if (to.name === 'login' && authStore.isAuthenticated) {
+    next({ name: "dashboard" });
+  } else if (to.name === "login" && authStore.isAuthenticated) {
     // Redirect to dashboard if already logged in
-    next({ name: 'dashboard' })
+    next({ name: "dashboard" });
   } else {
-    next()
+    next();
   }
-})
+});
 
-export default router
-
+export default router;

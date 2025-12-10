@@ -95,9 +95,12 @@ async function saveSettings() {
       allow_public_registration: settings.allow_public_registration,
       server_timezone: settings.server_timezone,
       token_cleanup_interval: settings.token_cleanup_interval,
-      scheduler_function_timeout_seconds: settings.scheduler_function_timeout_seconds,
-      scheduler_max_schedules_per_tick: settings.scheduler_max_schedules_per_tick,
-      scheduler_max_concurrent_executions: settings.scheduler_max_concurrent_executions,
+      scheduler_function_timeout_seconds:
+        settings.scheduler_function_timeout_seconds,
+      scheduler_max_schedules_per_tick:
+        settings.scheduler_max_schedules_per_tick,
+      scheduler_max_concurrent_executions:
+        settings.scheduler_max_concurrent_executions,
       storage_enabled: settings.storage_enabled,
       storage_endpoint: settings.storage_endpoint,
       storage_bucket: settings.storage_bucket,
@@ -121,6 +124,8 @@ async function saveSettings() {
 
     // Update instance name in sidebar
     await authStore.fetchInstanceInfo();
+    // Refresh storage status if it changed
+    await authStore.checkStorageStatus();
 
     success.value = "Settings saved successfully";
     setTimeout(() => {
@@ -219,9 +224,9 @@ async function saveSettings() {
             step="1"
           />
           <small
-            >How often to run token cleanup (in scheduler ticks). For example, if
-            scheduler runs every 5 seconds and this is set to 60, cleanup runs
-            every 5 minutes (60 × 5s).</small
+            >How often to run token cleanup (in scheduler ticks). For example,
+            if scheduler runs every 5 seconds and this is set to 60, cleanup
+            runs every 5 minutes (60 × 5s).</small
           >
         </label>
 
@@ -236,7 +241,8 @@ async function saveSettings() {
             placeholder="1800"
           />
           <small
-            >Maximum execution time for scheduled functions. Leave empty to use default (1800 seconds = 30 minutes).</small
+            >Maximum execution time for scheduled functions. Leave empty to use
+            default (1800 seconds = 30 minutes).</small
           >
         </label>
 
@@ -251,7 +257,8 @@ async function saveSettings() {
             placeholder="100"
           />
           <small
-            >Maximum number of schedules to process in each scheduler tick. Leave empty to use default (100).</small
+            >Maximum number of schedules to process in each scheduler tick.
+            Leave empty to use default (100).</small
           >
         </label>
 
@@ -266,7 +273,8 @@ async function saveSettings() {
             placeholder="10"
           />
           <small
-            >Maximum number of schedules to execute concurrently. Leave empty to use default (10).</small
+            >Maximum number of schedules to execute concurrently. Leave empty to
+            use default (10).</small
           >
         </label>
       </article>
