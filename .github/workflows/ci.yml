@@ -27,15 +27,15 @@ jobs:
       - name: Install dependencies and project
         run: uv sync --group dev
       
-      - name: Debug: Check Python path
+      - name: "Debug: Check Python path"
         run: |
           uv run python -c "import sys; print('Python:', sys.executable); print('Path:'); [print(p) for p in sys.path]"
       
-      - name: Debug: Check if tinybase is installed
+      - name: "Debug: Check if tinybase is installed"
         run: |
           uv run python -c "import sys; import os; print('Current dir:', os.getcwd()); print('Files:', os.listdir('.')); print('Tinybase dir exists:', os.path.exists('tinybase'))"
       
-      - name: Debug: List installed packages
+      - name: "Debug: List installed packages"
         run: uv pip list | grep -i tinybase || echo "tinybase not found in pip list"
       
       - name: Verify installation
