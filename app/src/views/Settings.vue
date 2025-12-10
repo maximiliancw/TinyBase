@@ -24,6 +24,10 @@ interface InstanceSettings {
   storage_endpoint: string | null;
   storage_bucket: string | null;
   storage_region: string | null;
+  auth_portal_enabled: boolean;
+  auth_portal_logo_url: string | null;
+  auth_portal_primary_color: string | null;
+  auth_portal_background_color: string | null;
   updated_at: string;
 }
 
@@ -45,6 +49,10 @@ const settings = reactive<InstanceSettings>({
   storage_endpoint: null,
   storage_bucket: null,
   storage_region: null,
+  auth_portal_enabled: true,
+  auth_portal_logo_url: null,
+  auth_portal_primary_color: null,
+  auth_portal_background_color: null,
   updated_at: "",
 });
 
@@ -108,6 +116,10 @@ async function saveSettings() {
       storage_endpoint: settings.storage_endpoint,
       storage_bucket: settings.storage_bucket,
       storage_region: settings.storage_region,
+      auth_portal_enabled: settings.auth_portal_enabled,
+      auth_portal_logo_url: settings.auth_portal_logo_url,
+      auth_portal_primary_color: settings.auth_portal_primary_color,
+      auth_portal_background_color: settings.auth_portal_background_color,
     };
 
     // Only include credentials if they're filled in
@@ -373,6 +385,61 @@ async function saveSettings() {
         </div>
       </article>
 
+      <!-- Auth Portal Settings -->
+      <article>
+        <header>
+          <h3>Auth Portal</h3>
+        </header>
+
+        <label>
+          <input
+            type="checkbox"
+            v-model="settings.auth_portal_enabled"
+            role="switch"
+          />
+          Enable Auth Portal
+        </label>
+        <small class="text-muted">
+          When enabled, a public-facing authentication portal will be available
+          at /auth with login, registration, and password reset functionality.
+        </small>
+
+        <div v-if="settings.auth_portal_enabled" class="portal-fields">
+          <label for="auth_portal_logo_url">
+            Logo URL
+            <input
+              id="auth_portal_logo_url"
+              v-model="settings.auth_portal_logo_url"
+              type="url"
+              placeholder="https://example.com/logo.png"
+            />
+            <small>Optional logo URL to display in the auth portal.</small>
+          </label>
+
+          <div class="grid">
+            <label for="auth_portal_primary_color">
+              Primary Color
+              <input
+                id="auth_portal_primary_color"
+                v-model="settings.auth_portal_primary_color"
+                type="color"
+              />
+              <small>Primary color for buttons and links.</small>
+            </label>
+
+            <label for="auth_portal_background_color">
+              Background Color
+              <input
+                id="auth_portal_background_color"
+                v-model="settings.auth_portal_background_color"
+                type="color"
+              />
+              <small>Background color for the portal.</small>
+            </label>
+          </div>
+        </div>
+      </article>
+
       <!-- Status Messages -->
       <ins v-if="success" class="pico-background-green-500">
         {{ success }}
@@ -407,7 +474,8 @@ article {
   margin-bottom: var(--tb-spacing-lg);
 }
 
-.storage-fields {
+.storage-fields,
+.portal-fields {
   margin-top: var(--tb-spacing-lg);
   padding-top: var(--tb-spacing-lg);
   border-top: 1px solid var(--tb-border);

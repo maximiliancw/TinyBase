@@ -17,6 +17,7 @@ from slowapi.util import get_remote_address
 
 from tinybase.api.routes import admin, auth, collections, extensions, files, functions, schedules
 from tinybase.api.routes.static_admin import mount_admin_ui
+from tinybase.api.routes.static_auth import mount_auth_portal
 from tinybase.collections.service import load_collections_into_registry
 from tinybase.config import settings
 from tinybase.db.core import create_db_and_tables, get_engine
@@ -147,6 +148,11 @@ def create_app() -> FastAPI:
     if not admin_mounted:
         logger.warning("Admin UI static files not found - /admin will not be available")
 
+    # Mount auth portal
+    auth_mounted = mount_auth_portal(app)
+    if not auth_mounted:
+        logger.warning("Auth portal static files not found - /auth will not be available")
+
     # Root endpoint
     @app.get("/", tags=["Root"])
     def root() -> dict:
@@ -157,6 +163,7 @@ def create_app() -> FastAPI:
             "docs": "/docs",
             "openapi": "/openapi.json",
             "admin": "/admin" if admin_mounted else None,
+            "auth": "/auth" if auth_mounted else None,
         }
 
     # Health check endpoint

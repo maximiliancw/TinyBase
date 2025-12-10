@@ -133,6 +133,15 @@ class Settings(BaseSettings):
         default="~/.tinybase/extensions", description="Directory path for installed extensions"
     )
 
+    # Email settings
+    email_enabled: bool = Field(default=False, description="Enable email sending")
+    email_smtp_host: str | None = Field(default=None, description="SMTP server hostname")
+    email_smtp_port: int = Field(default=587, description="SMTP server port")
+    email_smtp_user: str | None = Field(default=None, description="SMTP username")
+    email_smtp_password: str | None = Field(default=None, description="SMTP password")
+    email_from_address: str | None = Field(default=None, description="From email address")
+    email_from_name: str = Field(default="TinyBase", description="From name for emails")
+
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, v: str) -> str:

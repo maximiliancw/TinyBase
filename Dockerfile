@@ -5,7 +5,7 @@
 # 2. Creates a minimal Python runtime image
 
 # =============================================================================
-# Stage 1: Build Admin UI
+# Stage 1: Build Admin UI (includes auth portal)
 # =============================================================================
 FROM node:20-slim AS frontend-builder
 
@@ -40,7 +40,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 COPY pyproject.toml README.md LICENSE ./
 COPY tinybase/ ./tinybase/
 
-# Copy built admin UI from frontend stage
+# Copy built admin UI (includes auth portal) from frontend builder stage
 COPY --from=frontend-builder /app/dist ./tinybase/admin_static/
 
 # Install TinyBase using uv

@@ -418,6 +418,14 @@ class InstanceSettingsResponse(BaseModel):
     storage_bucket: str | None = Field(default=None, description="S3 bucket name")
     storage_region: str | None = Field(default=None, description="S3 region")
     # Note: access_key and secret_key are not returned for security
+    auth_portal_enabled: bool = Field(description="Auth portal enabled")
+    auth_portal_logo_url: str | None = Field(default=None, description="Auth portal logo URL")
+    auth_portal_primary_color: str | None = Field(
+        default=None, description="Auth portal primary color"
+    )
+    auth_portal_background_color: str | None = Field(
+        default=None, description="Auth portal background color"
+    )
     updated_at: str = Field(description="Last update time")
 
 
@@ -448,6 +456,10 @@ class InstanceSettingsUpdate(BaseModel):
     storage_access_key: str | None = Field(default=None, max_length=200)
     storage_secret_key: str | None = Field(default=None, max_length=200)
     storage_region: str | None = Field(default=None, max_length=50)
+    auth_portal_enabled: bool | None = Field(default=None)
+    auth_portal_logo_url: str | None = Field(default=None, max_length=500)
+    auth_portal_primary_color: str | None = Field(default=None, max_length=50)
+    auth_portal_background_color: str | None = Field(default=None, max_length=50)
 
 
 def settings_to_response(settings: InstanceSettings) -> InstanceSettingsResponse:
@@ -465,6 +477,10 @@ def settings_to_response(settings: InstanceSettings) -> InstanceSettingsResponse
         storage_endpoint=settings.storage_endpoint,
         storage_bucket=settings.storage_bucket,
         storage_region=settings.storage_region,
+        auth_portal_enabled=settings.auth_portal_enabled,
+        auth_portal_logo_url=settings.auth_portal_logo_url,
+        auth_portal_primary_color=settings.auth_portal_primary_color,
+        auth_portal_background_color=settings.auth_portal_background_color,
         updated_at=settings.updated_at.isoformat(),
     )
 
@@ -592,6 +608,14 @@ def update_settings(
         settings.storage_secret_key = request.storage_secret_key
     if request.storage_region is not None:
         settings.storage_region = request.storage_region
+    if request.auth_portal_enabled is not None:
+        settings.auth_portal_enabled = request.auth_portal_enabled
+    if request.auth_portal_logo_url is not None:
+        settings.auth_portal_logo_url = request.auth_portal_logo_url
+    if request.auth_portal_primary_color is not None:
+        settings.auth_portal_primary_color = request.auth_portal_primary_color
+    if request.auth_portal_background_color is not None:
+        settings.auth_portal_background_color = request.auth_portal_background_color
 
     settings.updated_at = utcnow()
     session.add(settings)

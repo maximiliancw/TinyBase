@@ -2,6 +2,7 @@
  * Vue Router configuration for TinyBase Admin UI
  *
  * Defines routes for all admin pages and handles authentication guards.
+ * Also includes public auth portal routes.
  */
 
 import { createRouter, createWebHistory } from "vue-router";
@@ -20,79 +21,127 @@ const Settings = () => import("../views/Settings.vue");
 const Extensions = () => import("../views/Extensions.vue");
 const Files = () => import("../views/Files.vue");
 
+// Auth portal views
+const AuthLogin = () => import("../views/auth/AuthLogin.vue");
+const AuthRegister = () => import("../views/auth/AuthRegister.vue");
+const AuthPasswordResetRequest = () =>
+  import("../views/auth/AuthPasswordResetRequest.vue");
+const AuthPasswordResetConfirm = () =>
+  import("../views/auth/AuthPasswordResetConfirm.vue");
+
 const router = createRouter({
-  history: createWebHistory("/admin/"),
+  history: createWebHistory("/"),
   routes: [
+    // Admin login (for admin UI)
     {
-      path: "/login",
-      name: "login",
+      path: "/admin/login",
+      name: "admin-login",
       component: Login,
       meta: { requiresAuth: false },
     },
+    // Auth portal routes (public)
     {
-      path: "/",
+      path: "/auth/login",
+      name: "auth-login",
+      component: AuthLogin,
+      meta: { requiresAuth: false, isAuthPortal: true },
+    },
+    {
+      path: "/auth/register",
+      name: "auth-register",
+      component: AuthRegister,
+      meta: { requiresAuth: false, isAuthPortal: true },
+    },
+    {
+      path: "/auth/password-reset",
+      name: "auth-password-reset-request",
+      component: AuthPasswordResetRequest,
+      meta: { requiresAuth: false, isAuthPortal: true },
+    },
+    {
+      path: "/auth/password-reset/:token",
+      name: "auth-password-reset-confirm",
+      component: AuthPasswordResetConfirm,
+      meta: { requiresAuth: false, isAuthPortal: true },
+    },
+    {
+      path: "/admin",
       name: "dashboard",
       component: Dashboard,
       meta: { requiresAuth: true },
     },
     {
-      path: "/collections",
+      path: "/admin/",
+      redirect: "/admin",
+    },
+    {
+      path: "/admin/collections",
       name: "collections",
       component: Collections,
       meta: { requiresAuth: true },
     },
     {
-      path: "/collections/:name",
+      path: "/admin/collections/:name",
       name: "collection-detail",
       component: CollectionDetail,
       meta: { requiresAuth: true },
     },
     {
-      path: "/users",
+      path: "/admin/users",
       name: "users",
       component: Users,
       meta: { requiresAuth: true, requiresAdmin: true },
     },
     {
-      path: "/functions",
+      path: "/admin/functions",
       name: "functions",
       component: Functions,
       meta: { requiresAuth: true },
     },
     {
-      path: "/schedules",
+      path: "/admin/schedules",
       name: "schedules",
       component: Schedules,
       meta: { requiresAuth: true, requiresAdmin: true },
     },
     {
-      path: "/function-calls",
+      path: "/admin/function-calls",
       name: "function-calls",
       component: FunctionCalls,
       meta: { requiresAuth: true, requiresAdmin: true },
     },
     {
-      path: "/settings",
+      path: "/admin/settings",
       name: "settings",
       component: Settings,
       meta: { requiresAuth: true, requiresAdmin: true },
     },
     {
-      path: "/extensions",
+      path: "/admin/extensions",
       name: "extensions",
       component: Extensions,
       meta: { requiresAuth: true, requiresAdmin: true },
     },
     {
-      path: "/files",
+      path: "/admin/files",
       name: "files",
       component: Files,
       meta: { requiresAuth: true },
     },
-    // Catch-all redirect to dashboard
+    // Root redirect to admin dashboard
+    {
+      path: "/",
+      redirect: "/admin",
+    },
+    // Auth root redirect to login
+    {
+      path: "/auth",
+      redirect: "/auth/login",
+    },
+    // Catch-all redirect to admin dashboard
     {
       path: "/:pathMatch(.*)*",
-      redirect: "/",
+      redirect: "/admin",
     },
   ],
 });
@@ -113,14 +162,17 @@ router.beforeEach(async (to, _from, next) => {
   const requiresAuth = to.meta.requiresAuth !== false;
   const requiresAdmin = to.meta.requiresAdmin === true;
 
-  if (requiresAuth && !authStore.isAuthenticated) {
-    // Redirect to login if not authenticated
-    next({ name: "login", query: { redirect: to.fullPath } });
+  // Auth portal routes don't require authentication
+  const isAuthPortal = to.meta.isAuthPortal === true;
+
+  if (requiresAuth && !authStore.isAuthenticated && !isAuthPortal) {
+    // Redirect to admin login if not authenticated (not for auth portal)
+    next({ name: "admin-login", query: { redirect: to.fullPath } });
   } else if (requiresAdmin && !authStore.isAdmin) {
     // Redirect to dashboard if not admin
     next({ name: "dashboard" });
-  } else if (to.name === "login" && authStore.isAuthenticated) {
-    // Redirect to dashboard if already logged in
+  } else if (to.name === "admin-login" && authStore.isAuthenticated) {
+    // Redirect to dashboard if already logged in (admin login)
     next({ name: "dashboard" });
   } else {
     next();

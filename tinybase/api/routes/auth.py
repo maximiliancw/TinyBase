@@ -20,16 +20,19 @@ from tinybase.auth import (
     CurrentUser,
     DbSession,
     create_auth_token,
+    generate_token,
     hash_password,
     verify_password,
 )
-from tinybase.db.models import InstanceSettings, User
+from tinybase.db.models import InstanceSettings, PasswordResetToken, User
+from tinybase.email import send_password_reset_email
 from tinybase.extensions.hooks import (
     UserLoginEvent,
     UserRegisterEvent,
     run_user_login_hooks,
     run_user_register_hooks,
 )
+from tinybase.utils import utcnow
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -96,6 +99,44 @@ class InstanceInfoResponse(BaseModel):
     """Public instance information."""
 
     instance_name: str = Field(description="The name of this TinyBase instance")
+
+
+class PasswordResetRequest(BaseModel):
+    """Password reset request."""
+
+    email: EmailStr = Field(description="User email address")
+
+
+class PasswordResetRequestResponse(BaseModel):
+    """Password reset request response."""
+
+    message: str = Field(
+        default="If the email exists, a password reset link has been sent",
+        description="Response message (always the same for security)",
+    )
+
+
+class PasswordResetConfirm(BaseModel):
+    """Password reset confirmation."""
+
+    token: str = Field(description="Password reset token")
+    password: str = Field(min_length=8, description="New password (min 8 characters)")
+
+
+class PasswordResetConfirmResponse(BaseModel):
+    """Password reset confirmation response."""
+
+    message: str = Field(default="Password reset successful")
+
+
+class PortalConfigResponse(BaseModel):
+    """Auth portal configuration."""
+
+    instance_name: str = Field(description="Instance name")
+    logo_url: str | None = Field(default=None, description="Logo URL")
+    primary_color: str | None = Field(default=None, description="Primary color")
+    background_color: str | None = Field(default=None, description="Background color")
+    registration_enabled: bool = Field(description="Whether registration is enabled")
 
 
 # =============================================================================
@@ -292,4 +333,134 @@ def get_me(user: CurrentUser) -> UserInfo:
         email=user.email,
         is_admin=user.is_admin,
         created_at=user.created_at.isoformat(),
+    )
+
+
+@router.post(
+    "/password-reset/request",
+    response_model=PasswordResetRequestResponse,
+    summary="Request password reset",
+    description="Request a password reset email. Always returns success for security.",
+)
+@limiter.limit("5/minute")
+def request_password_reset(
+    request: Request,
+    body: PasswordResetRequest,
+    session: DbSession,
+    background_tasks: BackgroundTasks,
+) -> PasswordResetRequestResponse:
+    """
+    Request a password reset.
+
+    If the email exists, generates a reset token and sends an email.
+    Always returns the same response for security (prevents email enumeration).
+    """
+    # Find user by email
+    user = session.exec(select(User).where(User.email == body.email)).first()
+
+    if user:
+        # Generate reset token
+        token_str = generate_token()
+        reset_token = PasswordResetToken(
+            user_id=user.id,
+            token=token_str,
+        )
+        session.add(reset_token)
+        session.commit()
+
+        # Build reset URL
+        base_url = str(request.base_url).rstrip("/")
+        reset_url = f"{base_url}/auth/password-reset/{token_str}"
+
+        # Send email in background
+        background_tasks.add_task(send_password_reset_email, user.email, token_str, reset_url)
+
+    # Always return the same response (security best practice)
+    return PasswordResetRequestResponse()
+
+
+@router.post(
+    "/password-reset/confirm",
+    response_model=PasswordResetConfirmResponse,
+    summary="Confirm password reset",
+    description="Reset password using a valid reset token.",
+)
+@limiter.limit("10/minute")
+def confirm_password_reset(
+    request: Request,
+    body: PasswordResetConfirm,
+    session: DbSession,
+) -> PasswordResetConfirmResponse:
+    """
+    Confirm password reset with token.
+
+    Validates the token, checks it hasn't expired or been used,
+    then updates the user's password.
+    """
+    # Find token
+    reset_token = session.exec(
+        select(PasswordResetToken).where(PasswordResetToken.token == body.token)
+    ).first()
+
+    if not reset_token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token",
+        )
+
+    # Check if token is valid
+    if not reset_token.is_valid():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token",
+        )
+
+    # Get user
+    user = session.get(User, reset_token.user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token",
+        )
+
+    # Update password
+    user.password_hash = hash_password(body.password)
+    user.updated_at = utcnow()
+
+    # Mark token as used
+    reset_token.used_at = utcnow()
+
+    session.add(user)
+    session.add(reset_token)
+    session.commit()
+
+    return PasswordResetConfirmResponse()
+
+
+@router.get(
+    "/portal-config",
+    response_model=PortalConfigResponse,
+    summary="Get portal configuration",
+    description="Get public portal configuration (no auth required).",
+)
+def get_portal_config(session: DbSession) -> PortalConfigResponse:
+    """
+    Get portal configuration for the auth portal UI.
+
+    Returns instance name, logo, colors, and registration status.
+    This endpoint does not require authentication.
+    """
+    instance_settings = session.get(InstanceSettings, 1)
+    if not instance_settings:
+        return PortalConfigResponse(
+            instance_name="TinyBase",
+            registration_enabled=True,
+        )
+
+    return PortalConfigResponse(
+        instance_name=instance_settings.instance_name,
+        logo_url=instance_settings.auth_portal_logo_url,
+        primary_color=instance_settings.auth_portal_primary_color,
+        background_color=instance_settings.auth_portal_background_color,
+        registration_enabled=instance_settings.allow_public_registration,
     )

@@ -12,7 +12,7 @@ Defines all core entities:
 - Extension: Installed extensions/plugins
 """
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
 from sqlalchemy import Column
@@ -75,6 +75,41 @@ class AuthToken(SQLModel, table=True):
         if expires.tzinfo is None:
             expires = expires.replace(tzinfo=timezone.utc)
         return now > expires
+
+
+class PasswordResetToken(SQLModel, table=True):
+    """
+    Password reset token model.
+
+    Tokens are generated when users request password resets and are used
+    to securely reset passwords. Tokens expire after 1 hour and can only
+    be used once.
+    """
+
+    __tablename__ = "password_reset_token"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    user_id: UUID = Field(foreign_key="user.id", index=True)
+    token: str = Field(index=True, unique=True, max_length=255)
+    created_at: datetime = Field(default_factory=utcnow)
+    expires_at: datetime = Field(default_factory=lambda: utcnow() + timedelta(hours=1))
+    used_at: datetime | None = Field(default=None)
+
+    def is_expired(self) -> bool:
+        """Check if this token has expired."""
+        now = utcnow()
+        expires = self.expires_at
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        return now > expires
+
+    def is_used(self) -> bool:
+        """Check if this token has already been used."""
+        return self.used_at is not None
+
+    def is_valid(self) -> bool:
+        """Check if this token is valid (not expired and not used)."""
+        return not self.is_expired() and not self.is_used()
 
 
 # =============================================================================
@@ -235,6 +270,12 @@ class InstanceSettings(SQLModel, table=True):
 
     # Auth settings
     allow_public_registration: bool = Field(default=True)
+
+    # Auth Portal settings
+    auth_portal_enabled: bool = Field(default=True)
+    auth_portal_logo_url: str | None = Field(default=None, max_length=500)
+    auth_portal_primary_color: str | None = Field(default=None, max_length=50)
+    auth_portal_background_color: str | None = Field(default=None, max_length=50)
 
     # Server timezone (used for schedule defaults)
     # If empty, schedules use UTC by default

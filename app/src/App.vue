@@ -8,29 +8,45 @@
 import { computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "./stores/auth";
+import { usePortalStore } from "./stores/portal";
 
 const router = useRouter();
 const authStore = useAuthStore();
+const portalStore = usePortalStore();
+
+const isAuthPortal = computed(() => {
+  return router.currentRoute.value.meta?.isAuthPortal === true;
+});
 
 const showSidebar = computed(() => {
   return (
-    authStore.isAuthenticated && router.currentRoute.value.name !== "login"
+    authStore.isAuthenticated &&
+    router.currentRoute.value.name !== "admin-login" &&
+    !isAuthPortal.value
   );
 });
 
 onMounted(async () => {
+  // Only fetch portal config if we're on an auth portal route
+  if (isAuthPortal.value) {
+    await portalStore.fetchConfig();
+  }
   await authStore.fetchInstanceInfo();
   await authStore.checkStorageStatus();
 });
 
 function handleLogout() {
   authStore.logout();
-  router.push("/login");
+  router.push("/admin/login");
 }
 </script>
 
 <template>
-  <div id="app-root" :class="{ 'has-sidebar': showSidebar }">
+  <div
+    id="app-root"
+    :class="{ 'has-sidebar': showSidebar, 'auth-portal': isAuthPortal }"
+    :style="isAuthPortal ? portalStore.styles : {}"
+  >
     <!-- Sidebar Navigation -->
     <aside v-if="showSidebar" class="sidebar">
       <header>
@@ -58,7 +74,7 @@ function handleLogout() {
           <small>Overview</small>
           <ul>
             <li>
-              <router-link to="/">
+              <router-link to="/admin">
                 <span class="nav-icon">
                   <svg
                     viewBox="0 0 24 24"
@@ -78,7 +94,7 @@ function handleLogout() {
               </router-link>
             </li>
             <li>
-              <router-link to="/settings">
+              <router-link to="/admin/settings">
                 <span class="nav-icon">
                   <svg
                     viewBox="0 0 24 24"
@@ -98,7 +114,7 @@ function handleLogout() {
               </router-link>
             </li>
             <li>
-              <router-link to="/extensions">
+              <router-link to="/admin/extensions">
                 <span class="nav-icon">
                   <svg
                     viewBox="0 0 24 24"
@@ -123,7 +139,7 @@ function handleLogout() {
           <small>Database</small>
           <ul>
             <li>
-              <router-link to="/users">
+              <router-link to="/admin/users">
                 <span class="nav-icon">
                   <svg
                     viewBox="0 0 24 24"
@@ -143,7 +159,7 @@ function handleLogout() {
               </router-link>
             </li>
             <li>
-              <router-link to="/collections">
+              <router-link to="/admin/collections">
                 <span class="nav-icon">
                   <svg
                     viewBox="0 0 24 24"
@@ -162,7 +178,7 @@ function handleLogout() {
               </router-link>
             </li>
             <li>
-              <router-link to="/files">
+              <router-link to="/admin/files">
                 <span class="nav-icon">
                   <svg
                     viewBox="0 0 24 24"
@@ -191,7 +207,7 @@ function handleLogout() {
           <small>Functions</small>
           <ul>
             <li>
-              <router-link to="/functions">
+              <router-link to="/admin/functions">
                 <span class="nav-icon">
                   <svg
                     viewBox="0 0 24 24"
@@ -208,7 +224,7 @@ function handleLogout() {
               </router-link>
             </li>
             <li>
-              <router-link to="/schedules">
+              <router-link to="/admin/schedules">
                 <span class="nav-icon">
                   <svg
                     viewBox="0 0 24 24"
@@ -226,7 +242,7 @@ function handleLogout() {
               </router-link>
             </li>
             <li>
-              <router-link to="/function-calls">
+              <router-link to="/admin/function-calls">
                 <span class="nav-icon">
                   <svg
                     viewBox="0 0 24 24"
@@ -315,5 +331,17 @@ aside.sidebar > footer {
   margin-top: auto;
   padding: var(--tb-spacing-lg);
   padding-bottom: var(--tb-spacing-md);
+}
+
+/* Auth portal layout */
+#app-root.auth-portal {
+  min-height: 100vh;
+}
+
+#app-root.auth-portal main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--tb-spacing-lg);
 }
 </style>

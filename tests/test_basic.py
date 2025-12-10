@@ -383,3 +383,126 @@ def test_admin_get_function_call_not_found(client, admin_token):
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 404
+
+
+def test_password_reset_request(client):
+    """Test requesting a password reset."""
+    # Register a user first
+    client.post(
+        "/api/auth/register",
+        json={
+            "email": "reset@test.com",
+            "password": "testpassword123",
+        },
+    )
+
+    # Request password reset
+    response = client.post(
+        "/api/auth/password-reset/request",
+        json={"email": "reset@test.com"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "message" in data
+
+
+def test_password_reset_request_nonexistent_email(client):
+    """Test that password reset request always returns success (security)."""
+    # Request reset for non-existent email
+    response = client.post(
+        "/api/auth/password-reset/request",
+        json={"email": "nonexistent@test.com"},
+    )
+    # Should still return 200 (security best practice)
+    assert response.status_code == 200
+    data = response.json()
+    assert "message" in data
+
+
+def test_password_reset_confirm(client):
+    """Test confirming password reset with valid token."""
+    from sqlmodel import Session, select
+
+    from tinybase.db.core import get_engine
+    from tinybase.db.models import PasswordResetToken, User
+
+    # Register a user
+    client.post(
+        "/api/auth/register",
+        json={
+            "email": "resetconfirm@test.com",
+            "password": "oldpassword123",
+        },
+    )
+
+    # Request password reset
+    client.post(
+        "/api/auth/password-reset/request",
+        json={"email": "resetconfirm@test.com"},
+    )
+
+    # Get the reset token from database
+    engine = get_engine()
+    with Session(engine) as session:
+        user = session.exec(select(User).where(User.email == "resetconfirm@test.com")).first()
+        reset_token = session.exec(
+            select(PasswordResetToken).where(PasswordResetToken.user_id == user.id)
+        ).first()
+
+    # Confirm password reset
+    response = client.post(
+        "/api/auth/password-reset/confirm",
+        json={
+            "token": reset_token.token,
+            "password": "newpassword123",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "message" in data
+
+    # Verify new password works
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": "resetconfirm@test.com",
+            "password": "newpassword123",
+        },
+    )
+    assert login_response.status_code == 200
+
+
+def test_password_reset_confirm_invalid_token(client):
+    """Test that confirming with invalid token fails."""
+    response = client.post(
+        "/api/auth/password-reset/confirm",
+        json={
+            "token": "invalid_token",
+            "password": "newpassword123",
+        },
+    )
+    assert response.status_code == 400
+
+
+def test_password_reset_confirm_short_password(client):
+    """Test that confirming with short password fails."""
+    response = client.post(
+        "/api/auth/password-reset/confirm",
+        json={
+            "token": "some_token",
+            "password": "short",  # Less than 8 characters
+        },
+    )
+    assert response.status_code == 422
+
+
+def test_portal_config(client):
+    """Test getting portal configuration."""
+    response = client.get("/api/auth/portal-config")
+    assert response.status_code == 200
+    data = response.json()
+    assert "instance_name" in data
+    assert "registration_enabled" in data
+    assert "logo_url" in data
+    assert "primary_color" in data
+    assert "background_color" in data
