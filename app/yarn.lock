@@ -557,6 +557,11 @@ hasown@^2.0.2:
   dependencies:
     function-bind "^1.1.2"
 
+lucide-vue-next@^0.560.0:
+  version "0.560.0"
+  resolved "https://registry.yarnpkg.com/lucide-vue-next/-/lucide-vue-next-0.560.0.tgz#e0efb64e65af5265596d6567675cfb0d60c9b457"
+  integrity sha512-vVUVEollzn33iloTKn0GqH7lyifvmXWCU2kRYz6ePt0QeJU8hXbWHC11vgv/4QaXEA1dEdWzlMh+Ckb0V30QDA==
+
 magic-string@^0.30.21:
   version "0.30.21"
   resolved "https://registry.yarnpkg.com/magic-string/-/magic-string-0.30.21.tgz#56763ec09a0fa8091df27879fd94d19078c00d91"

@@ -6,6 +6,7 @@
  * Provides consistent structure and behavior across the application.
  */
 import { watch, onUnmounted } from "vue";
+import Icon from "./Icon.vue";
 
 interface Props {
   /** Whether the modal is open */
@@ -67,7 +68,9 @@ onUnmounted(() => {
   <dialog :open="open">
     <article>
       <header v-if="title || $slots.header">
-        <button aria-label="Close" rel="prev" @click="close"></button>
+        <button aria-label="Close" rel="prev" @click="close">
+          <Icon name="X" :size="20" />
+        </button>
         <h3 v-if="title && !$slots.header">{{ title }}</h3>
         <slot v-else name="header" />
       </header>
@@ -92,5 +95,24 @@ footer {
 
 footer button {
   margin: 0;
+}
+
+/* Close button styling */
+header button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--tb-spacing-xs);
+  margin: 0;
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--tb-text-muted);
+  transition: color var(--tb-transition-fast);
+}
+
+header button:hover {
+  color: var(--tb-text);
 }
 </style>
