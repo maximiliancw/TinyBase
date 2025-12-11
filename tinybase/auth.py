@@ -7,7 +7,7 @@ for authenticating API requests.
 
 import logging
 import secrets
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Annotated
 
 import bcrypt
@@ -17,7 +17,7 @@ from sqlmodel import Session, select
 
 from tinybase.config import settings
 from tinybase.db.core import get_session
-from tinybase.db.models import AuthToken, User
+from tinybase.db.models import ApplicationToken, AuthToken, User
 from tinybase.utils import utcnow
 
 logger = logging.getLogger(__name__)
@@ -251,3 +251,134 @@ def cleanup_expired_tokens(session: Session) -> int:
         logger.info(f"Cleaned up {count} expired auth tokens")
 
     return count
+
+
+# =============================================================================
+# Application Token Utilities
+# =============================================================================
+
+
+def create_application_token(
+    session: Session,
+    name: str,
+    description: str | None = None,
+    expires_at: datetime | None = None,
+) -> ApplicationToken:
+    """
+    Create and persist a new application token for system-to-system authentication.
+
+    Args:
+        session: Database session.
+        name: Human-readable name for this token.
+        description: Optional description of the token's purpose.
+        expires_at: Optional expiration datetime. If None, token never expires.
+
+    Returns:
+        The created ApplicationToken instance (with token value).
+    """
+    token = ApplicationToken(
+        name=name,
+        token=generate_token(),
+        description=description,
+        expires_at=expires_at,
+        is_active=True,
+    )
+    session.add(token)
+    session.commit()
+    session.refresh(token)
+    return token
+
+
+def get_application_token(session: Session, token_str: str) -> ApplicationToken | None:
+    """
+    Get an application token by its token string.
+
+    Args:
+        session: Database session.
+        token_str: The token string to look up.
+
+    Returns:
+        The ApplicationToken if valid, None otherwise.
+    """
+    statement = select(ApplicationToken).where(ApplicationToken.token == token_str)
+    app_token = session.exec(statement).first()
+
+    if app_token is None:
+        return None
+
+    if not app_token.is_valid():
+        return None
+
+    # Update last_used_at
+    app_token.last_used_at = utcnow()
+    session.add(app_token)
+    session.commit()
+
+    return app_token
+
+
+def revoke_application_token(session: Session, token_id: UUID) -> bool:
+    """
+    Revoke (deactivate) an application token.
+
+    Args:
+        session: Database session.
+        token_id: The ID of the token to revoke.
+
+    Returns:
+        True if token was found and revoked, False otherwise.
+    """
+    token = session.get(ApplicationToken, token_id)
+    if token is None:
+        return False
+
+    token.is_active = False
+    session.add(token)
+    session.commit()
+    return True
+
+
+# =============================================================================
+# Application Token FastAPI Dependency
+# =============================================================================
+
+
+def get_application_token_auth(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
+    session: Annotated[Session, Depends(get_session)],
+) -> ApplicationToken:
+    """
+    Get the application token from the request (required).
+
+    Raises HTTP 401 if no valid application token is provided.
+
+    Args:
+        credentials: The HTTP Bearer credentials.
+        session: Database session.
+
+    Returns:
+        The authenticated ApplicationToken.
+
+    Raises:
+        HTTPException: 401 if not authenticated with a valid application token.
+    """
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Application token required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    app_token = get_application_token(session, credentials.credentials)
+    if app_token is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired application token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return app_token
+
+
+# Type alias for dependency injection
+CurrentApplicationToken = Annotated[ApplicationToken, Depends(get_application_token_auth)]

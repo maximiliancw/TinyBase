@@ -112,6 +112,43 @@ class PasswordResetToken(SQLModel, table=True):
         return not self.is_expired() and not self.is_used()
 
 
+class ApplicationToken(SQLModel, table=True):
+    """
+    Application token model for system-to-system authentication.
+
+    Application tokens are used for authenticating orchestration systems,
+    monitoring tools, and other automated services that need to access
+    instance metadata, metrics, and health endpoints. Unlike user auth tokens,
+    these tokens are not tied to a specific user and are designed for
+    long-lived system access.
+    """
+
+    __tablename__ = "application_token"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    name: str = Field(max_length=200, description="Human-readable name for this token")
+    token: str = Field(index=True, unique=True, max_length=255)
+    description: str | None = Field(default=None, max_length=500)
+    created_at: datetime = Field(default_factory=utcnow)
+    last_used_at: datetime | None = Field(default=None)
+    expires_at: datetime | None = Field(default=None)
+    is_active: bool = Field(default=True)
+
+    def is_expired(self) -> bool:
+        """Check if this token has expired."""
+        if self.expires_at is None:
+            return False
+        now = utcnow()
+        expires = self.expires_at
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        return now > expires
+
+    def is_valid(self) -> bool:
+        """Check if this token is valid (active and not expired)."""
+        return self.is_active and not self.is_expired()
+
+
 # =============================================================================
 # Collection & Record Models
 # =============================================================================

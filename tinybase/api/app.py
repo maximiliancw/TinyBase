@@ -15,7 +15,15 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from tinybase.api.routes import admin, auth, collections, extensions, files, functions, schedules
+from tinybase.api.routes import (
+    admin,
+    auth,
+    collections,
+    extensions,
+    files,
+    functions,
+    schedules,
+)
 from tinybase.api.routes.static_admin import mount_admin_ui
 from tinybase.api.routes.static_auth import mount_auth_portal
 from tinybase.collections.service import load_collections_into_registry
@@ -79,6 +87,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Starting scheduler...")
     await start_scheduler()
 
+    # Mark application as ready
+    app.state.ready = True
     logger.info("TinyBase server started successfully")
 
     yield
@@ -119,6 +129,9 @@ def create_app() -> FastAPI:
         redoc_url="/redoc",
         openapi_url="/openapi.json",
     )
+
+    # Initialize readiness state
+    app.state.ready = False
 
     # Configure rate limiting
     app.state.limiter = limiter
@@ -166,10 +179,26 @@ def create_app() -> FastAPI:
             "auth": "/auth" if auth_mounted else None,
         }
 
-    # Health check endpoint
+    # Basic health check endpoints (no auth required)
     @app.get("/health", tags=["Health"])
     def health() -> dict:
-        """Health check endpoint."""
+        """
+        Basic health check endpoint (liveness probe).
+
+        Returns healthy if the application process is running.
+        This is a simple liveness probe that doesn't require authentication.
+        Suitable for container orchestrators to check if the process is alive.
+        """
         return {"status": "healthy"}
+
+    @app.get("/healthz", tags=["Health"])
+    def healthz() -> dict:
+        """
+        Kubernetes-style health check endpoint.
+
+        Returns a simple status for Kubernetes liveness probes.
+        Does NOT require authentication.
+        """
+        return {"status": "ok"}
 
     return app
