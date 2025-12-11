@@ -8,6 +8,7 @@
 import { onMounted, ref, reactive, watch, computed } from "vue";
 import { api } from "../api";
 import { useAuthStore } from "../stores/auth";
+import Modal from "../components/Modal.vue";
 
 const authStore = useAuthStore();
 
@@ -361,29 +362,30 @@ async function saveSettings() {
         <header>
           <h3>General</h3>
         </header>
-
-        <label for="instance_name">
-          Instance Name
-          <input
-            id="instance_name"
-            v-model="settings.instance_name"
-            type="text"
-            maxlength="100"
-          />
-          <small>The name displayed in the admin UI and API responses.</small>
-        </label>
-        <label for="server_timezone">
-          Server Timezone
-          <select id="server_timezone" v-model="settings.server_timezone">
-            <option v-for="tz in commonTimezones" :key="tz" :value="tz">
-              {{ tz }}
-            </option>
-          </select>
-          <small>
-            Default timezone for scheduled functions. Individual schedules can
-            override this.
-          </small>
-        </label>
+        <div class="grid">
+          <label for="instance_name">
+            Instance Name
+            <input
+              id="instance_name"
+              v-model="settings.instance_name"
+              type="text"
+              maxlength="100"
+            />
+            <small>The name displayed in the admin UI and API responses.</small>
+          </label>
+          <label for="server_timezone">
+            Server Timezone
+            <select id="server_timezone" v-model="settings.server_timezone">
+              <option v-for="tz in commonTimezones" :key="tz" :value="tz">
+                {{ tz }}
+              </option>
+            </select>
+            <small>
+              Default timezone for scheduled functions. Individual schedules can
+              override this.
+            </small>
+          </label>
+        </div>
       </article>
 
       <!-- Authentication Settings -->
@@ -937,74 +939,66 @@ async function saveSettings() {
       </article>
 
       <!-- Create Token Modal -->
-      <dialog :open="showCreateTokenForm">
-        <article>
-          <header>
-            <button
-              aria-label="Close"
-              rel="prev"
-              @click="showCreateTokenForm = false"
-            ></button>
-            <h3>Create Application Token</h3>
-          </header>
+      <Modal
+        v-model:open="showCreateTokenForm"
+        title="Create Application Token"
+      >
+        <form id="token-form" @submit.prevent="createApplicationToken">
+          <label for="token_name">
+            Name
+            <input
+              id="token_name"
+              v-model="newTokenName"
+              type="text"
+              placeholder="e.g., Production API Client"
+              maxlength="200"
+              required
+            />
+            <small>A descriptive name for this token.</small>
+          </label>
 
-          <form @submit.prevent="createApplicationToken">
-            <label for="token_name">
-              Name
-              <input
-                id="token_name"
-                v-model="newTokenName"
-                type="text"
-                placeholder="e.g., Production API Client"
-                maxlength="200"
-                required
-              />
-              <small>A descriptive name for this token.</small>
-            </label>
+          <label for="token_description">
+            Description (optional)
+            <textarea
+              id="token_description"
+              v-model="newTokenDescription"
+              placeholder="What will this token be used for?"
+              maxlength="500"
+              rows="3"
+            ></textarea>
+          </label>
 
-            <label for="token_description">
-              Description (optional)
-              <textarea
-                id="token_description"
-                v-model="newTokenDescription"
-                placeholder="What will this token be used for?"
-                maxlength="500"
-                rows="3"
-              ></textarea>
-            </label>
-
-            <label for="token_expires_days">
-              Expires in (days)
-              <input
-                id="token_expires_days"
-                v-model.number="newTokenExpiresDays"
-                type="number"
-                min="1"
-                placeholder="Leave empty for no expiration"
-              />
-              <small>Leave empty if the token should never expire.</small>
-            </label>
-
-            <footer>
-              <button
-                type="button"
-                class="secondary"
-                @click="showCreateTokenForm = false"
-                :disabled="creatingToken"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                :aria-busy="creatingToken"
-                :disabled="creatingToken || !newTokenName"
-              >
-                {{ creatingToken ? "" : "Create Token" }}
-              </button>
-            </footer>
-          </form>
-        </article>
-      </dialog>
+          <label for="token_expires_days">
+            Expires in (days)
+            <input
+              id="token_expires_days"
+              v-model.number="newTokenExpiresDays"
+              type="number"
+              min="1"
+              placeholder="Leave empty for no expiration"
+            />
+            <small>Leave empty if the token should never expire.</small>
+          </label>
+        </form>
+        <template #footer>
+          <button
+            type="button"
+            class="secondary"
+            @click="showCreateTokenForm = false"
+            :disabled="creatingToken"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="token-form"
+            :aria-busy="creatingToken"
+            :disabled="creatingToken || !newTokenName"
+          >
+            {{ creatingToken ? "" : "Create Token" }}
+          </button>
+        </template>
+      </Modal>
 
       <!-- Status Messages -->
       <ins v-if="success" class="pico-background-green-500">
@@ -1025,7 +1019,9 @@ async function saveSettings() {
               : "Never"
           }}
         </div>
-        <div>
+        <div
+          style="display: flex; justify-content: center; align-items: center"
+        >
           <button type="submit" :aria-busy="saving" :disabled="saving">
             {{ saving ? "" : "Save Settings" }}
           </button>
@@ -1036,26 +1032,23 @@ async function saveSettings() {
 </template>
 
 <style scoped>
-article {
-  margin-bottom: var(--tb-spacing-lg);
-}
-
+/* Component-specific layout - not overriding PicoCSS semantic elements */
 .storage-fields {
-  margin-top: var(--tb-spacing-lg);
-  padding-top: var(--tb-spacing-lg);
-  border-top: 1px solid var(--tb-border);
+  margin-top: var(--pico-block-spacing-vertical);
+  padding-top: var(--pico-block-spacing-vertical);
+  border-top: 1px solid var(--pico-muted-border-color);
 }
 
 .portal-fields {
-  margin-top: var(--tb-spacing-lg);
-  padding-top: var(--tb-spacing-lg);
-  border-top: 1px solid var(--tb-border);
+  margin-top: var(--pico-block-spacing-vertical);
+  padding-top: var(--pico-block-spacing-vertical);
+  border-top: 1px solid var(--pico-muted-border-color);
 }
 
 .portal-config-fields {
-  margin-top: var(--tb-spacing-md);
-  padding-top: var(--tb-spacing-md);
-  border-top: 1px solid var(--tb-border);
+  margin-top: var(--pico-spacing);
+  padding-top: var(--pico-spacing);
+  border-top: 1px solid var(--pico-muted-border-color);
 }
 
 .preview-controls {
@@ -1091,16 +1084,7 @@ article {
   align-items: center;
 }
 
-/* Alert styles using Pico's ins/del for success/error */
-ins,
-del {
-  display: block;
-  padding: var(--tb-spacing-sm) var(--tb-spacing-md);
-  border-radius: var(--tb-radius);
-  margin-bottom: var(--tb-spacing-lg);
-  text-decoration: none;
-}
-
+/* Alert styles using Pico's ins/del for success/error - theme colors only */
 ins {
   background: var(--tb-success-bg);
   color: var(--tb-success);
@@ -1141,8 +1125,8 @@ del {
   padding: 0;
   width: 3rem;
   height: 2.5rem;
-  border: 2px solid var(--pico-border-color);
-  border-radius: var(--tb-radius);
+  border: 2px solid var(--pico-form-element-border-color);
+  border-radius: var(--pico-border-radius);
   overflow: hidden;
   background: var(--pico-background-color);
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -1150,7 +1134,7 @@ del {
 
 .color-picker-trigger:hover {
   border-color: var(--pico-primary);
-  box-shadow: 0 0 0 2px var(--pico-primary-background);
+  box-shadow: 0 0 0 2px var(--pico-primary-focus);
 }
 
 .color-picker-input {
@@ -1167,16 +1151,16 @@ del {
   display: block;
   width: 100%;
   height: 100%;
-  border-radius: calc(var(--tb-radius) - 2px);
+  border-radius: calc(var(--pico-border-radius) - 2px);
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
 }
 
 .token-created-alert {
   background: var(--pico-background-color);
   border: 2px solid var(--pico-primary);
-  border-radius: var(--tb-radius);
-  padding: var(--tb-spacing-lg);
-  margin-bottom: var(--tb-spacing-lg);
+  border-radius: var(--pico-border-radius);
+  padding: var(--pico-block-spacing-vertical);
+  margin-bottom: var(--pico-block-spacing-vertical);
 }
 
 .token-created-alert strong {
@@ -1190,11 +1174,11 @@ del {
   gap: var(--tb-spacing-sm);
   align-items: center;
   justify-content: center;
-  margin: var(--tb-spacing-md) 0;
+  margin: var(--pico-spacing) 0;
   padding: var(--tb-spacing-sm);
   background: var(--pico-background-color);
-  border: 1px solid var(--tb-border);
-  border-radius: var(--tb-radius);
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
 }
 
 .token-display code {
@@ -1205,13 +1189,13 @@ del {
 }
 
 .empty-state {
-  padding: var(--tb-spacing-lg);
+  padding: var(--pico-block-spacing-vertical);
   text-align: center;
   color: var(--pico-muted-color);
 }
 
 .status-active {
-  color: var(--pico-success);
+  color: var(--tb-success);
   font-weight: 600;
 }
 
@@ -1219,27 +1203,8 @@ del {
   color: var(--pico-muted-color);
 }
 
-table {
-  width: 100%;
-  margin-top: var(--tb-spacing-md);
-}
-
-table th {
-  text-align: left;
-  font-weight: 600;
-  padding: var(--tb-spacing-sm);
-  border-bottom: 2px solid var(--tb-border);
-}
-
-table td {
-  padding: var(--tb-spacing-sm);
-  border-bottom: 1px solid var(--tb-border);
-}
-
-table tr:last-child td {
-  border-bottom: none;
-}
-
+/* Table styling removed - use PicoCSS defaults */
+/* Only keep specific alignment override */
 table tr:first-child th:last-child {
   text-align: center;
 }
@@ -1278,8 +1243,5 @@ table tr:first-child th:last-child {
   align-items: center;
 }
 
-.token-header button.small {
-  font-size: 0.875rem;
-  padding: var(--tb-spacing-xs) var(--tb-spacing-sm);
-}
+/* Button small variant - let PicoCSS handle sizing */
 </style>

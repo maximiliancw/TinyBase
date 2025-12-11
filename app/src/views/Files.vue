@@ -7,6 +7,7 @@
  */
 import { onMounted, ref } from "vue";
 import { api } from "../api";
+import Modal from "../components/Modal.vue";
 
 interface FileInfo {
   key: string;
@@ -338,118 +339,96 @@ async function handleKeyAction(action: "download" | "delete") {
     </div>
 
     <!-- Upload Modal -->
-    <dialog :open="showUploadModal">
-      <article>
-        <header>
-          <button
-            aria-label="Close"
-            rel="prev"
-            @click="showUploadModal = false"
-          ></button>
-          <h3>Upload File</h3>
-        </header>
-
-        <form @submit.prevent="handleUpload">
-          <label for="file">
-            File
-            <input
-              id="file"
-              type="file"
-              @change="handleFileSelect"
-              :disabled="uploading"
-              required
-            />
-          </label>
-
-          <label for="path_prefix">
-            Path Prefix (optional)
-            <input
-              id="path_prefix"
-              v-model="pathPrefix"
-              type="text"
-              placeholder="uploads/images/"
-              :disabled="uploading"
-            />
-            <small>
-              Optional prefix to organize files (e.g., "uploads/images/").
-              Trailing slash is optional.
-            </small>
-          </label>
-
-          <small v-if="uploadError" class="text-error">
-            {{ uploadError }}
-          </small>
-
-          <footer class="modal-footer">
-            <button
-              type="button"
-              class="secondary"
-              @click="showUploadModal = false"
-              :disabled="uploading"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              :aria-busy="uploading"
-              :disabled="uploading || !uploadFile"
-            >
-              {{ uploading ? "" : "Upload" }}
-            </button>
-          </footer>
-        </form>
-      </article>
-    </dialog>
-
-    <!-- Access by Key Modal -->
-    <dialog :open="showKeyModal">
-      <article>
-        <header>
-          <button
-            aria-label="Close"
-            rel="prev"
-            @click="showKeyModal = false"
-          ></button>
-          <h3>Access File by Key</h3>
-        </header>
-
-        <p class="text-muted">
-          Enter the storage key (path) of a file to download or delete it.
-        </p>
-
-        <label for="manual_key">
-          Storage Key
+    <Modal v-model:open="showUploadModal" title="Upload File">
+      <form id="upload-form" @submit.prevent="handleUpload">
+        <label for="file">
+          File
           <input
-            id="manual_key"
-            v-model="manualKey"
-            type="text"
-            placeholder="uploads/images/abc123.jpg"
+            id="file"
+            type="file"
+            @change="handleFileSelect"
+            :disabled="uploading"
             required
           />
         </label>
 
-        <footer class="modal-footer">
-          <button type="button" class="secondary" @click="showKeyModal = false">
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="contrast"
-            @click="handleKeyAction('delete')"
-            :disabled="!manualKey.trim()"
-          >
-            Delete
-          </button>
-          <button
-            type="button"
-            @click="handleKeyAction('download')"
-            :disabled="!manualKey.trim()"
-          >
-            Download
-          </button>
-        </footer>
-      </article>
-    </dialog>
+        <label for="path_prefix">
+          Path Prefix (optional)
+          <input
+            id="path_prefix"
+            v-model="pathPrefix"
+            type="text"
+            placeholder="uploads/images/"
+            :disabled="uploading"
+          />
+          <small>
+            Optional prefix to organize files (e.g., "uploads/images/").
+            Trailing slash is optional.
+          </small>
+        </label>
+
+        <small v-if="uploadError" class="text-error">
+          {{ uploadError }}
+        </small>
+      </form>
+      <template #footer>
+        <button
+          type="button"
+          class="secondary"
+          @click="showUploadModal = false"
+          :disabled="uploading"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          form="upload-form"
+          :aria-busy="uploading"
+          :disabled="uploading || !uploadFile"
+        >
+          {{ uploading ? "" : "Upload" }}
+        </button>
+      </template>
+    </Modal>
+
+    <!-- Access by Key Modal -->
+    <Modal v-model:open="showKeyModal" title="Access File by Key">
+      <p class="text-muted">
+        Enter the storage key (path) of a file to download or delete it.
+      </p>
+
+      <label for="manual_key">
+        Storage Key
+        <input
+          id="manual_key"
+          v-model="manualKey"
+          type="text"
+          placeholder="uploads/images/abc123.jpg"
+          required
+        />
+      </label>
+
+      <template #footer>
+        <button type="button" class="secondary" @click="showKeyModal = false">
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="contrast"
+          @click="handleKeyAction('delete')"
+          :disabled="!manualKey.trim()"
+        >
+          Delete
+        </button>
+        <button
+          type="button"
+          @click="handleKeyAction('download')"
+          :disabled="!manualKey.trim()"
+        >
+          Download
+        </button>
+      </template>
+    </Modal>
   </div>
 </template>
 
@@ -485,17 +464,6 @@ async function handleKeyAction(action: "download" | "delete") {
 }
 
 .action-buttons button {
-  margin: 0;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--tb-spacing-sm);
-  margin-top: var(--tb-spacing-lg);
-}
-
-.modal-footer button {
   margin: 0;
 }
 

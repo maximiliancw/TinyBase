@@ -7,6 +7,7 @@
  */
 import { onMounted, ref, reactive } from "vue";
 import { api } from "../api";
+import Modal from "../components/Modal.vue";
 
 interface Extension {
   id: string;
@@ -91,7 +92,8 @@ async function handleInstall() {
     });
 
     showInstallModal.value = false;
-    success.value = "Extension installed successfully. Restart the server to load it.";
+    success.value =
+      "Extension installed successfully. Restart the server to load it.";
     setTimeout(() => {
       success.value = null;
     }, 5000);
@@ -115,10 +117,13 @@ async function handleUninstall() {
   uninstalling.value = true;
 
   try {
-    await api.delete(`/api/admin/extensions/${extensionToUninstall.value.name}`);
+    await api.delete(
+      `/api/admin/extensions/${extensionToUninstall.value.name}`
+    );
 
     showUninstallModal.value = false;
-    success.value = "Extension uninstalled. Restart the server to fully unload it.";
+    success.value =
+      "Extension uninstalled. Restart the server to fully unload it.";
     setTimeout(() => {
       success.value = null;
     }, 5000);
@@ -139,7 +144,9 @@ async function toggleEnabled(ext: Extension) {
     });
 
     ext.is_enabled = !ext.is_enabled;
-    success.value = `Extension ${ext.is_enabled ? "enabled" : "disabled"}. Restart the server to apply changes.`;
+    success.value = `Extension ${
+      ext.is_enabled ? "enabled" : "disabled"
+    }. Restart the server to apply changes.`;
     setTimeout(() => {
       success.value = null;
     }, 3000);
@@ -205,7 +212,11 @@ function formatDate(dateStr: string): string {
             </mark>
           </div>
           <small class="text-muted">v{{ ext.version }}</small>
-          <mark v-if="ext.update_available" data-status="info" class="update-badge">
+          <mark
+            v-if="ext.update_available"
+            data-status="info"
+            class="update-badge"
+          >
             Update available: v{{ ext.update_available }}
           </mark>
         </header>
@@ -259,110 +270,93 @@ function formatDate(dateStr: string): string {
     </div>
 
     <!-- Install Modal -->
-    <dialog :open="showInstallModal">
-      <article>
-        <header>
-          <button
-            aria-label="Close"
-            rel="prev"
-            @click="showInstallModal = false"
-          ></button>
-          <h3>Install Extension</h3>
-        </header>
-
-        <div v-if="!showWarningAccepted" class="warning-box">
-          <h4>Security Warning</h4>
-          <p>
-            Extensions can execute arbitrary Python code on your server.
-            Only install extensions from sources you trust.
-          </p>
-          <p>
-            <small class="text-muted">
-              Before installing, review the extension's source code on GitHub.
-            </small>
-          </p>
-          <button @click="showWarningAccepted = true">
-            I understand, continue
-          </button>
-        </div>
-
-        <form v-else @submit.prevent="handleInstall">
-          <label for="install_url">
-            GitHub Repository URL
-            <input
-              id="install_url"
-              v-model="installUrl"
-              type="url"
-              placeholder="https://github.com/username/tinybase-extension"
-              :disabled="installing"
-            />
-            <small>
-              The repository must contain an <code>extension.toml</code> manifest.
-            </small>
-          </label>
-
-          <small v-if="installError" class="text-error">
-            {{ installError }}
+    <Modal v-model:open="showInstallModal" title="Install Extension">
+      <div v-if="!showWarningAccepted" class="warning-box">
+        <h4>Security Warning</h4>
+        <p>
+          Extensions can execute arbitrary Python code on your server. Only
+          install extensions from sources you trust.
+        </p>
+        <p>
+          <small class="text-muted">
+            Before installing, review the extension's source code on GitHub.
           </small>
+        </p>
+        <button @click="showWarningAccepted = true">
+          I understand, continue
+        </button>
+      </div>
 
-          <footer class="modal-footer">
-            <button
-              type="button"
-              class="outline"
-              @click="showInstallModal = false"
-              :disabled="installing"
-            >
-              Cancel
-            </button>
-            <button type="submit" :aria-busy="installing" :disabled="installing">
-              {{ installing ? "" : "Install" }}
-            </button>
-          </footer>
-        </form>
-      </article>
-    </dialog>
+      <form id="install-form" v-else @submit.prevent="handleInstall">
+        <label for="install_url">
+          GitHub Repository URL
+          <input
+            id="install_url"
+            v-model="installUrl"
+            type="url"
+            placeholder="https://github.com/username/tinybase-extension"
+            :disabled="installing"
+          />
+          <small>
+            The repository must contain an <code>extension.toml</code> manifest.
+          </small>
+        </label>
+
+        <small v-if="installError" class="text-error">
+          {{ installError }}
+        </small>
+      </form>
+      <template #footer>
+        <button
+          type="button"
+          class="outline"
+          @click="showInstallModal = false"
+          :disabled="installing"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          form="install-form"
+          :aria-busy="installing"
+          :disabled="installing"
+        >
+          {{ installing ? "" : "Install" }}
+        </button>
+      </template>
+    </Modal>
 
     <!-- Uninstall Confirmation Modal -->
-    <dialog :open="showUninstallModal">
-      <article>
-        <header>
-          <button
-            aria-label="Close"
-            rel="prev"
-            @click="showUninstallModal = false"
-          ></button>
-          <h3>Uninstall Extension</h3>
-        </header>
+    <Modal v-model:open="showUninstallModal" title="Uninstall Extension">
+      <p>
+        Are you sure you want to uninstall
+        <strong>{{ extensionToUninstall?.name }}</strong
+        >?
+      </p>
+      <p class="text-muted">
+        This will remove the extension files. Any functions registered by this
+        extension will no longer be available after the server restarts.
+      </p>
 
-        <p>
-          Are you sure you want to uninstall
-          <strong>{{ extensionToUninstall?.name }}</strong>?
-        </p>
-        <p class="text-muted">
-          This will remove the extension files. Any functions registered by this
-          extension will no longer be available after the server restarts.
-        </p>
-
-        <footer class="modal-footer">
-          <button
-            type="button"
-            class="outline"
-            @click="showUninstallModal = false"
-            :disabled="uninstalling"
-          >
-            Cancel
-          </button>
-          <button
-            class="danger"
-            @click="handleUninstall"
-            :aria-busy="uninstalling"
-            :disabled="uninstalling"
-          >
-            {{ uninstalling ? "" : "Uninstall" }}
-          </button>
-        </footer>
-      </article>
-    </dialog>
+      <template #footer>
+        <button
+          type="button"
+          class="outline"
+          @click="showUninstallModal = false"
+          :disabled="uninstalling"
+        >
+          Cancel
+        </button>
+        <button
+          class="danger"
+          @click="handleUninstall"
+          :aria-busy="uninstalling"
+          :disabled="uninstalling"
+        >
+          {{ uninstalling ? "" : "Uninstall" }}
+        </button>
+      </template>
+    </Modal>
   </div>
 </template>
 
@@ -475,17 +469,6 @@ function formatDate(dateStr: string): string {
   margin-top: 0;
 }
 
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--tb-spacing-sm);
-  margin-top: var(--tb-spacing-lg);
-}
-
-.modal-footer button {
-  margin: 0;
-}
-
 button.danger,
 .button.danger {
   --pico-background-color: var(--tb-error);
@@ -562,4 +545,3 @@ button.small {
   font-size: 0.875rem;
 }
 </style>
-
